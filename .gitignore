@@ -100,3 +100,8 @@ dump.rdb
 ci/pod/otelcol-contrib/data-otlp.json
 # bytecode from importing the .py test drivers
 t/plugin/__pycache__/
+
+# Scratchpad and AI Assistants
+.codegraph/
+.remember/
+private/

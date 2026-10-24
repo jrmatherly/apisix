@@ -32,3 +32,8 @@ dist-ssr
 /playwright/.cache/
 
 .eslintcache
+
+.codegraph/
+.remember/
+private/
+

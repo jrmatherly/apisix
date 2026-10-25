@@ -5,10 +5,11 @@ kind: Secret
 metadata:
   name: apisix-provider-keys
 stringData:
-  OPENAI_API_KEY: "#{ apisix.openai_api_key }#"
+  DEMO_CONSUMER_KEY: "#{ apisix.demo_consumer_key }#"
+  OPENAI_AUTHORIZATION: "Bearer #{ apisix.openai_api_key }#"
   ANTHROPIC_API_KEY: "#{ apisix.anthropic_api_key }#"
   AZURE_OPENAI_API_KEY: "#{ apisix.azure_openai_api_key }#"
   #% if nvidia_enabled %#
-  LOCAL_LLM_API_KEY: "#{ localai.api_key }#"
+  LOCAL_LLM_AUTHORIZATION: "Bearer #{ localai.api_key }#"
   #% endif %#
 #% endif %#

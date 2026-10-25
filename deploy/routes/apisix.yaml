@@ -21,7 +21,7 @@ routes:
         provider: openai-compatible
         auth:
           header:
-            Authorization: "Bearer $env://LOCAL_LLM_API_KEY"
+            Authorization: "$env://LOCAL_LLM_AUTHORIZATION"
         options:
           model: qwen-3.5-4b
         override:
@@ -43,7 +43,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
       ai-prompt-guard:
@@ -108,7 +108,7 @@ routes:
             weight: 3
             auth:
               header:
-                Authorization: "Bearer $env://OPENAI_API_KEY"
+                Authorization: "$env://OPENAI_AUTHORIZATION"
             options:
               model: gpt-4o-mini
           - name: anthropic

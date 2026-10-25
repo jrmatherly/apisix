@@ -2,11 +2,17 @@
 
 POST /v1/chat/completions echoes the last user message and reports token
 usage so ai-rate-limiting has numbers to count. GET /v1/models lists one model.
+Every request must carry "Authorization: Bearer $MOCK_TOKEN" (default
+mock-token), which proves the gateway resolved its $env:// reference.
 shortcut: no streaming, no embeddings; swap in Ollama/LocalAI for real answers.
 """
 import json
+import os
 import time
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+
+TOKEN = os.environ.get("MOCK_TOKEN", "mock-token")
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -24,6 +30,8 @@ class Handler(BaseHTTPRequestHandler):
         self._send(404, {"error": "not found"})
 
     def do_POST(self):
+        if self.headers.get("Authorization") != f"Bearer {TOKEN}":
+            return self._send(401, {"error": "bad or missing Authorization header"})
         if self.path != "/v1/chat/completions":
             return self._send(404, {"error": "not found"})
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0)) or b"{}"))

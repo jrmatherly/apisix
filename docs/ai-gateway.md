@@ -9,10 +9,10 @@ full URL.
 
 | Provider | ai-proxy `provider` | Native in 3.19? | Auth header | Endpoint |
 |---|---|---|---|---|
-| OpenAI | `openai` | yes (`apisix/plugins/ai-providers/openai.lua:38-49`) | `Authorization: Bearer $env://OPENAI_API_KEY` | default `api.openai.com` |
+| OpenAI | `openai` | yes (`apisix/plugins/ai-providers/openai.lua:38-49`) | `Authorization: $env://OPENAI_AUTHORIZATION` | default `api.openai.com` |
 | Anthropic | `anthropic` | **yes** (`apisix/plugins/ai-providers/anthropic.lua:37-45`) | `x-api-key: $env://ANTHROPIC_API_KEY` + `anthropic-version` | default `api.anthropic.com`; `/v1/messages` URI gives Messages API semantics, `/chat/completions` gives OpenAI-chat semantics |
 | Azure OpenAI | `azure-openai` | yes (`apisix/plugins/ai-providers/azure-openai.lua:26-36`) | `api-key: $env://AZURE_OPENAI_API_KEY` | `override.endpoint` required: full deployment URL with `api-version` (`docs/en/latest/plugins/ai-proxy.md:642-652`); body `model` is stripped |
-| Ollama / LocalAI | `openai-compatible` | no Ollama provider (grep of `apisix/`, `docs/`, `t/` finds none) | `Authorization: Bearer $env://LOCAL_LLM_API_KEY` (LocalAI needs it, Ollama ignores it) | `override.endpoint: http://<host>:11434/v1/chat/completions` (`apisix/plugins/ai-providers/openai-compatible.lua:35-47`, http scheme accepted at `ai-providers/base.lua:199-206`) |
+| Ollama / LocalAI | `openai-compatible` | no Ollama provider (grep of `apisix/`, `docs/`, `t/` finds none) | `Authorization: $env://LOCAL_LLM_AUTHORIZATION` (LocalAI needs it, Ollama ignores it) | `override.endpoint: http://<host>:11434/v1/chat/completions` (`apisix/plugins/ai-providers/openai-compatible.lua:35-47`, http scheme accepted at `ai-providers/base.lua:199-206`) |
 
 No provider adds an auth header for you except `auth.gcp` and `auth.aws`;
 `auth.header` is forwarded verbatim (`apisix/plugins/ai-transport/http.lua:86-107`).
@@ -168,7 +168,7 @@ Minimal route (Admin API body, OpenAI):
   "plugins": {
     "ai-proxy": {
       "provider": "openai",
-      "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } },
+      "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } },
       "options": { "model": "gpt-4o-mini" }
     }
   }
@@ -196,7 +196,7 @@ Same, Ollama via openai-compatible:
   "plugins": {
     "ai-proxy": {
       "provider": "openai-compatible",
-      "auth": { "header": { "Authorization": "Bearer $env://OLLAMA_TOKEN" } },
+      "auth": { "header": { "Authorization": "$env://LOCAL_LLM_AUTHORIZATION" } },
       "options": { "model": "llama3.1" },
       "override": { "endpoint": "http://ollama:11434/v1/chat/completions" }
     }
@@ -216,7 +216,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
@@ -251,7 +251,7 @@ Admin API body:
       "max_retries": 1,
       "instances": [
         { "name": "openai-primary", "provider": "openai", "weight": 8,
-          "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } },
+          "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } },
           "options": { "model": "gpt-4o-mini" } },
         { "name": "anthropic-backup", "provider": "anthropic", "weight": 2,
           "auth": { "header": { "x-api-key": "$secret://vault/1/llm/anthropic-key", "anthropic-version": "2023-06-01" } },
@@ -277,7 +277,7 @@ routes:
             weight: 8
             auth:
               header:
-                Authorization: "Bearer $env://OPENAI_API_KEY"
+                Authorization: "$env://OPENAI_AUTHORIZATION"
             options:
               model: gpt-4o-mini
           - name: anthropic-backup
@@ -311,7 +311,7 @@ Admin API:
   "plugins": {
     "ai-proxy": {
       "provider": "openai",
-      "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } },
+      "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } },
       "options": { "model": "gpt-4o-mini" }
     },
     "ai-rate-limiting": {
@@ -332,7 +332,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
       ai-rate-limiting:
@@ -356,7 +356,7 @@ Schema `:28-58`: `allow_patterns[]`, `deny_patterns[]` (PCRE, validated at `:73-
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-prompt-guard": { "deny_patterns": ["(?i)ignore (all|previous) instructions"], "match_all_roles": false },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -371,7 +371,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
@@ -390,7 +390,7 @@ Schema `:41-77`: required `templates[]` with `name` and `template{model, message
   "plugins": {
     "ai-prompt-template": { "templates": [ { "name": "summarize", "template": { "model": "gpt-4o-mini",
         "messages": [ { "role": "system", "content": "Summarize in {{ language }}." }, { "role": "user", "content": "{{ text }}" } ] } } ] },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } } }
   } }
 ```
 ```yaml
@@ -413,7 +413,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
 #END
 ```
 (Template variable syntax is `{{variable_name}}`, filled from the request body — `docs/en/latest/plugins/ai-prompt-template.md:52`, examples `:110-114`, `template_name` in the request at `:287`.)
@@ -430,7 +430,7 @@ Schema `:40-58`: `prepend[]` and/or `append[]` of `{role, content}` (`:21-33`); 
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-prompt-decorator": { "prepend": [ { "role": "system", "content": "You are a terse assistant." } ] },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -447,7 +447,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
@@ -464,7 +464,7 @@ Schema `:60-114`: required `prompt`, `provider` (same enum), `auth{header,query}
 ```json
 { "uri": "/rewrite", "methods": ["POST"],
   "plugins": { "ai-request-rewrite": { "prompt": "Translate the JSON body to English, keep keys.", "provider": "openai",
-      "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } } },
+      "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } } },
   "upstream": { "type": "roundrobin", "nodes": { "backend:8080": 1 } } }
 ```
 ```yaml
@@ -478,7 +478,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
     upstream:
@@ -502,7 +502,7 @@ External dependencies: **vector stores — Redis only** (`ai-cache/vector-search
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-cache": { "redis_host": "redis", "redis_port": 6379, "redis_password": "$env://REDIS_PASSWORD", "exact": { "ttl": 600 } },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -521,12 +521,12 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
 ```
-Semantic layer addition: `layers: ["exact","semantic"]`, `semantic.embedding.openai: {model: text-embedding-3-small, api_key: "$env://OPENAI_API_KEY"}`, `semantic.vector_search.redis: {}`. `check_schema` warns when `semantic` is configured but not listed in `layers` (`ai-cache.lua:68-71`) and warns on non-https embedding endpoints (`:60-63`).
+Semantic layer addition: `layers: ["exact","semantic"]`, `semantic.embedding.openai: {model: text-embedding-3-small, api_key: "$env://OPENAI_AUTHORIZATION"}`, `semantic.vector_search.redis: {}`. `check_schema` warns when `semantic` is configured but not listed in `layers` (`ai-cache.lua:68-71`) and warns on non-https embedding endpoints (`:60-63`).
 
 ---
 
@@ -587,7 +587,7 @@ Schema `:56-187`: required `comprehend{access_key_id, secret_access_key, region}
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-aws-content-moderation": { "comprehend": { "access_key_id": "$env://AWS_ACCESS_KEY_ID", "secret_access_key": "$env://AWS_SECRET_ACCESS_KEY", "region": "us-east-1" }, "moderation_threshold": 0.6 },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -606,7 +606,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
@@ -625,7 +625,7 @@ Schema `:35-121`: required `endpoint, region_id, access_key_id, access_key_secre
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-aliyun-content-moderation": { "endpoint": "https://green-cip.cn-shanghai.aliyuncs.com", "region_id": "cn-shanghai", "access_key_id": "$env://ALIYUN_AK_ID", "access_key_secret": "$env://ALIYUN_AK_SECRET" },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -643,7 +643,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END
@@ -662,7 +662,7 @@ Schema `ai-lakera-guard/schema.lua:21-100`: required `api_key` (sent as `Authori
 { "uri": "/v1/chat/completions", "methods": ["POST"],
   "plugins": {
     "ai-lakera-guard": { "api_key": "$secret://vault/1/lakera/api-key", "direction": "both", "deny_code": 400 },
-    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "Bearer $env://OPENAI_API_KEY" } }, "options": { "model": "gpt-4o-mini" } }
+    "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
 ```
 ```yaml
@@ -679,7 +679,7 @@ routes:
         provider: openai
         auth:
           header:
-            Authorization: "Bearer $env://OPENAI_API_KEY"
+            Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
 #END

@@ -17,7 +17,7 @@ editing: `cluster-apps` picks up `kubernetes/apps/ai-gateway/kustomization.yaml`
 ## Register the feature gate (four places, per `.claude/rules/validator.md`)
 
 1. `template/scripts/validate.py`: add an `Apisix(Model)` section with
-   `admin_key`, `viewer_key`, `etcd_root_password`, `oidc_client_id`, `oidc_client_secret`,
+   `admin_key`, `viewer_key`, `etcd_root_password`, `demo_consumer_key`, `oidc_client_id`, `oidc_client_secret`,
    `openai_api_key`, `anthropic_api_key`, `azure_openai_api_key`
    (all `str = ""`), `etcd_storage_class: str = "local-path"` (or the
    cluster's default class), and a computed `apisix_enabled` that is
@@ -44,7 +44,7 @@ Create the Pocket ID client by hand with callback
   behind Envoy Gateway's Pocket ID SecurityPolicy, group `cluster_admins`.
 - Secrets: `apisix-admin` (admin/viewer keys), `apisix-etcd` (etcd RBAC root
   password; the etcd NetworkPolicy admits only APISIX pods), `apisix-provider-keys` (env vars
-  that routes reference as `$env://OPENAI_API_KEY` and so on), `apisix-oidc`.
+  that routes reference as `$env://OPENAI_AUTHORIZATION` and so on), `apisix-oidc`.
   LocalAI's key is reused from `localai.api_key` when `nvidia_enabled`, and
   the namespace carries `localai.ai/client: "true"` so LocalAI's NetworkPolicy
   admits APISIX. Reach it at `http://localai.ai.svc.cluster.local:8080/v1`.

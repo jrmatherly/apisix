@@ -32,17 +32,20 @@ securityContext:
 service:
   type: ClusterIP
 
-# Env vars routes may reference as $env://NAME (docs/ai-gateway.md). Only the
+# Env vars routes may reference as $env://NAME (docs/ai-gateway.md); a reference
+# is the whole value, so *_AUTHORIZATION entries hold "Bearer ...". Only the
 # keys present in the secret are set; the rest resolve to empty.
 extraEnvVars:
-  - name: OPENAI_API_KEY
-    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: OPENAI_API_KEY, optional: true } }
+  - name: OPENAI_AUTHORIZATION
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: OPENAI_AUTHORIZATION, optional: true } }
   - name: ANTHROPIC_API_KEY
     valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: ANTHROPIC_API_KEY, optional: true } }
   - name: AZURE_OPENAI_API_KEY
     valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: AZURE_OPENAI_API_KEY, optional: true } }
-  - name: LOCAL_LLM_API_KEY
-    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: LOCAL_LLM_API_KEY, optional: true } }
+  - name: LOCAL_LLM_AUTHORIZATION
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: LOCAL_LLM_AUTHORIZATION, optional: true } }
+  - name: DEMO_CONSUMER_KEY
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: DEMO_CONSUMER_KEY, optional: true } }
 
 apisix:
   admin:
@@ -57,10 +60,11 @@ apisix:
     enabled: true
   nginx:
     envs:
-      - OPENAI_API_KEY
+      - OPENAI_AUTHORIZATION
       - ANTHROPIC_API_KEY
       - AZURE_OPENAI_API_KEY
-      - LOCAL_LLM_API_KEY
+      - LOCAL_LLM_AUTHORIZATION
+      - DEMO_CONSUMER_KEY
 
 metrics:
   serviceMonitor:

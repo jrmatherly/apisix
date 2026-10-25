@@ -43,6 +43,8 @@ services:
   mock-llm:
     image: python:3.13-alpine
     command: ["python", "-I", "/srv/server.py"]
+    environment:
+      MOCK_TOKEN: mock-token
     volumes:
       - ./mock-llm/server.py:/srv/server.py:ro
 

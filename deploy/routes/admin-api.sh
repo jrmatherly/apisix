@@ -19,7 +19,7 @@ put routes/local-chat '{
   "plugins": {
     "key-auth": {},
     "ai-proxy": {"provider": "openai-compatible",
-      "auth": {"header": {"Authorization": "Bearer $env://LOCAL_LLM_API_KEY"}},
+      "auth": {"header": {"Authorization": "$env://LOCAL_LLM_AUTHORIZATION"}},
       "options": {"model": "qwen-3.5-4b"},
       "override": {"endpoint": "'"$LOCAL_LLM_ENDPOINT"'"}},
     "ai-rate-limiting": {"limit": 20000, "time_window": 60, "limit_strategy": "total_tokens"}}}'
@@ -29,7 +29,7 @@ put routes/openai-chat '{
   "plugins": {
     "key-auth": {},
     "ai-proxy": {"provider": "openai",
-      "auth": {"header": {"Authorization": "Bearer $env://OPENAI_API_KEY"}},
+      "auth": {"header": {"Authorization": "$env://OPENAI_AUTHORIZATION"}},
       "options": {"model": "gpt-4o-mini"}},
     "ai-prompt-guard": {"deny_patterns": ["(?i)ignore (all|any) previous instructions"]}}}'
 
@@ -61,7 +61,7 @@ put routes/llm '{
          "auth": {"header": {"api-key": "$env://AZURE_OPENAI_API_KEY"}},
          "override": {"endpoint": "'"$AZURE_ENDPOINT"'"}},
         {"name": "openai", "provider": "openai", "weight": 3,
-         "auth": {"header": {"Authorization": "Bearer $env://OPENAI_API_KEY"}},
+         "auth": {"header": {"Authorization": "$env://OPENAI_AUTHORIZATION"}},
          "options": {"model": "gpt-4o-mini"}},
         {"name": "anthropic", "provider": "anthropic", "weight": 2,
          "auth": {"header": {"x-api-key": "$env://ANTHROPIC_API_KEY", "anthropic-version": "2023-06-01"}},

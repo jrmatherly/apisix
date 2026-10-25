@@ -26,10 +26,11 @@ deployment:
 nginx_config:
   # Env vars that routes may reference as $env://NAME (see docs/ai-gateway.md).
   envs:
-    - OPENAI_API_KEY
+    - OPENAI_AUTHORIZATION
     - ANTHROPIC_API_KEY
     - AZURE_OPENAI_API_KEY
-    - LOCAL_LLM_API_KEY
+    - LOCAL_LLM_AUTHORIZATION
+    - DEMO_CONSUMER_KEY
 
 plugin_attr:
   prometheus:

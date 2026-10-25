@@ -12,13 +12,13 @@ full URL.
 | OpenAI | `openai` | yes (`apisix/plugins/ai-providers/openai.lua:38-49`) | `Authorization: $env://OPENAI_AUTHORIZATION` | default `api.openai.com` |
 | Anthropic | `anthropic` | **yes** (`apisix/plugins/ai-providers/anthropic.lua:37-45`) | `x-api-key: $env://ANTHROPIC_API_KEY` + `anthropic-version` | default `api.anthropic.com`; `/v1/messages` URI gives Messages API semantics, `/chat/completions` gives OpenAI-chat semantics |
 | Azure OpenAI | `azure-openai` | yes (`apisix/plugins/ai-providers/azure-openai.lua:26-36`) | `api-key: $env://AZURE_OPENAI_API_KEY` | `override.endpoint` required: full deployment URL with `api-version` (`docs/en/latest/plugins/ai-proxy.md:642-652`); body `model` is stripped |
-| Ollama / LocalAI | `openai-compatible` | no Ollama provider (grep of `apisix/`, `docs/`, `t/` finds none) | `Authorization: $env://LOCAL_LLM_AUTHORIZATION` (LocalAI needs it, Ollama ignores it) | `override.endpoint: http://<host>:11434/v1/chat/completions` (`apisix/plugins/ai-providers/openai-compatible.lua:35-47`, http scheme accepted at `ai-providers/base.lua:199-206`) |
+| Ollama / LocalAI | `openai-compatible` | no Ollama provider (grep of `apisix/`, `docs/`, `t/` finds none) | `Authorization: $env://LOCAL_LLM_AUTHORIZATION` (LocalAI needs it, Ollama ignores it) | `override.endpoint: http://<host>:11434/v1/chat/completions` (`apisix/plugins/ai-providers/openai-compatible.lua:35-47`, scheme taken from the endpoint URL at `ai-providers/base.lua:196`) |
 
 No provider adds an auth header for you except `auth.gcp` and `auth.aws`;
 `auth.header` is forwarded verbatim (`apisix/plugins/ai-transport/http.lua:86-107`).
 
 Secrets are never inline. `$env://NAME` reads an env var that must be listed
-under `nginx_config.envs` (`docs/en/latest/terminology/secret.md:151`;
+under `nginx_config.envs` (`conf/config.yaml.example:245`, rendered as nginx `env` directives by `apisix/cli/ngx_tpl.lua:58-59`;
 `deploy/docker/apisix/config.yaml`, chart value `apisix.nginx.envs` in
 `deploy/kubernetes/values.yaml`). `$secret://vault/...` or
 `$secret://aws/...` / `$secret://gcp/...` use a configured secret provider
@@ -32,7 +32,7 @@ What each plugin needs for this milestone:
 | ai-proxy, ai-proxy-multi | provider keys as env/secret refs | configured in `deploy/routes/`; proven against the compose mock |
 | ai-rate-limiting | nothing external (`policy: local`); Redis for `policy: redis` | configured, proven (503 after the token budget) |
 | ai-prompt-guard, ai-prompt-template, ai-prompt-decorator, ai-request-rewrite | nothing external (`ai-request-rewrite` calls an LLM of its own with the same provider schema) | guard and decorator configured |
-| ai-cache | **Redis Stack** (RediSearch `FT.CREATE`/`FT.SEARCH`, `apisix/plugins/ai-cache/vector-search/redis.lua:52,98`); embeddings `openai` or `azure_openai` only (`apisix/plugins/ai-cache/schema.lua:106-134`) | not deployed: add a `redis/redis-stack` service first |
+| ai-cache | Redis. The default `exact` layer uses plain GET/SET (`apisix/plugins/ai-cache/schema.lua:78-85`, `ai-cache.lua:198,298`); only `layers: [exact, semantic]` needs Redis Stack with RediSearch (`apisix/plugins/ai-cache/vector-search/redis.lua:52,98`, `docs/en/latest/plugins/ai-cache.md:98`) plus `openai` or `azure_openai` embeddings (`ai-cache/schema.lua:106-134`) | not deployed: add a Redis service first |
 | ai-rag | **Azure OpenAI embeddings + Azure AI Search only** (`apisix/plugins/ai-rag.lua:43-56`, `maxProperties = 1`) | not deployed: needs those two Azure resources |
 | ai-aws-content-moderation | AWS Comprehend credentials + region | not deployed |
 | ai-aliyun-content-moderation | Aliyun endpoint, region, access key pair | not deployed |
@@ -52,7 +52,7 @@ Per-plugin reference follows, verified against this checkout.
 
 ---
 
-Repo: `/Users/jason/dev/apisix`, `apisix/core/version.lua:23` → `VERSION = "3.19.0"`. All `path:line` citations are relative to that root. Online doc checked: https://apisix.apache.org/docs/apisix/plugins/ai-proxy/ (page's version selector shows 3.19.0; it agrees with the repo doc on the provider enum, on `override.endpoint` being "required when provider is openai-compatible", and does not mention Ollama). Other online pages were not fetched; the repo docs under `docs/en/latest/plugins/` are the same release branch.
+Verified against this checkout at 3.19.0 (`apisix/core/version.lua:23`). Online doc checked: https://apisix.apache.org/docs/apisix/plugins/ai-proxy/ (version 3.19.0; it agrees with the repo doc on the provider enum and on `override.endpoint` being required for openai-compatible, and does not mention Ollama). Other plugin pages were not fetched; the repo docs under `docs/en/latest/plugins/` are the same release branch.
 
 Secret-reference syntax used in every example below: `$env://VARNAME` / `$ENV://VARNAME` and `$secret://$manager/$id/$secret_name/$key` (`docs/en/latest/terminology/secret.md:49`, `:76`, `:151`, `:221`). They work in "any string field in any plugin configuration" and are resolved in `plugin.filter()` at runtime (`secret.md:51`). Caveat: schema constraints on that field are bypassed (`secret.md:57`), and an unresolvable reference is used as a literal string with an error in error.log (`secret.md:63-65`). Standalone `apisix.yaml` must end with `#END` or it is not loaded (`docs/en/latest/deployment-modes.md:347`).
 
@@ -158,7 +158,7 @@ Behaviour proven from code:
 - Instance name seen by ai-rate-limiting is `"ai-proxy-" .. conf.provider` (`ai-proxy.lua:65`).
 - Upstream is bypassed (`ctx.bypass_nginx_upstream = true`, `ai-proxy.lua:68`); the route's `upstream` is irrelevant but the Admin API still requires a route to be valid, so docs examples put a dummy one.
 - "X-API-KEY style" auth: yes, any header name in `auth.header` is sent verbatim (lowercased key) — `ai-transport/http.lua:97-99`. Nothing sets `Authorization` for you except `auth.gcp`.
-- Ollama: use `provider: openai-compatible` with `override.endpoint: http://ollama:11434/v1/chat/completions` (or scheme+host only, path then defaults to `/v1/chat/completions`, `openai-compatible.lua:38`; `ai-providers/base.lua:217-222`). Plain `http` scheme is accepted (`base.lua:199-206`). This is derived from code; there is no Ollama example in repo or online docs (unverified as a tested configuration).
+- Ollama: use `provider: openai-compatible` with `override.endpoint: http://ollama:11434/v1/chat/completions` (or scheme+host only, path then defaults to `/v1/chat/completions`, `openai-compatible.lua:38`; `ai-providers/base.lua:217-222`). The scheme comes from the parsed endpoint, default https (`base.lua:196`), so plain `http` works. This is derived from code; there is no Ollama example in repo or online docs (unverified as a tested configuration).
 
 Minimal route (Admin API body, OpenAI):
 ```json
@@ -222,7 +222,7 @@ routes:
 #END
 ```
 
-Caveats: Azure needs `override.endpoint` set to the full deployment URL incl. `api-version` and `auth.header.api-key` (`docs/en/latest/plugins/ai-proxy.md:642-652`); `azure-openai` strips `model` from the body (`azure-openai.lua:29`). Bedrock streaming is opted-in by `body.stream=true` and uses `/converse-stream` with AWS EventStream framing (`bedrock-converse.lua:43-47`, `bedrock.lua:53-57`).
+Caveats: Azure needs `override.endpoint` set to the full deployment URL incl. `api-version` and `auth.header.api-key` (`docs/en/latest/plugins/ai-proxy.md:642-652`); `azure-openai` strips `model` from the body (`azure-openai.lua:29`). Bedrock streaming is opted-in by `body.stream=true` and uses `/converse-stream` with AWS EventStream framing (`bedrock-converse.lua:43-47`, `bedrock.lua:22-24,59-63`).
 
 ---
 
@@ -496,7 +496,7 @@ Purpose: Redis-backed response cache for LLM calls; L1 exact fingerprint, option
 
 Schema `ai-cache/schema.lua:24-170`: `policy` only `redis` (`:72-76`) with the shared redis fields merged in (`:22`, `:150-157`: `redis_host`, `redis_port`, `redis_password`…); `layers` ⊆ `exact|semantic`, must contain `exact`, default `["exact"]` (`:78-85`); `exact.ttl=3600` (`:27-33`); `cache_key{share_across_routes,include_consumer,include_vars}` (`:35-47`); `max_cache_body_size=1MiB`, `cache_headers=true`, `bypass_on[{header,equals}]`, `fail_mode`. `semantic` (required when `layers` has semantic, `:158-164`): `similarity_threshold=0.95`, `top_k=1`, `distance_metric=cosine`, `ttl=86400`, `match{...}`, `embedding` = exactly one of `openai{model,api_key required; endpoint default https://api.openai.com/v1/embeddings}` or `azure_openai{endpoint,api_key required}` (`:106-134`; endpoints in `ai-cache/embeddings/openai.lua:21,33`, `azure_openai.lua:28-31` sends `api-key`), `vector_search.redis.index="ai-cache"` (`:135-145`). Encrypted: `redis_password`, both `api_key`s (`:165-169`).
 
-External dependencies: **vector stores — Redis only** (`ai-cache/vector-search/redis.lua`, uses `FT.CREATE`/`FT.SEARCH`, i.e. RediSearch / Redis Stack, `:52`, `:98`; doc `docs/en/latest/plugins/ai-cache.md:98-100`). **Embeddings — openai or azure_openai only** (`ai-cache/embeddings/`). No qdrant/azure_ai_search in ai-cache.
+External dependencies: **Redis**. The default `exact` layer uses plain GET/SET (`ai-cache.lua:198,298`); the `semantic` layer uses `FT.CREATE`/`FT.SEARCH` (`ai-cache/vector-search/redis.lua:52,98`) and therefore needs Redis Stack with RediSearch (`docs/en/latest/plugins/ai-cache.md:98-100`). **Embeddings — openai or azure_openai only** (`ai-cache/embeddings/`). No qdrant/azure_ai_search in ai-cache.
 
 ```json
 { "uri": "/v1/chat/completions", "methods": ["POST"],

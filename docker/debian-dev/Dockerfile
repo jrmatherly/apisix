@@ -14,7 +14,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# full image: the dashboard build (unplugin-info) needs the git binary
+# full image, not -slim: unplugin-info spawns git at build time (it fails without
+# the binary; with no .git in the context it just records no commit sha)
 FROM node:24-bookworm AS dashboard
 
 WORKDIR /dashboard

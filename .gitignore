@@ -70,6 +70,7 @@ t/lib/dubbo*/**/target/
 !.licenserc.yaml
 !.ignore_words
 !.env.example
+!.dockerignore
 conf/apisix.yaml
 conf/apisix-*.yaml
 conf/config-*.yaml
@@ -106,3 +107,6 @@ t/plugin/__pycache__/
 .codegraph/
 .remember/
 private/
+
+# embedded dashboard build output (make ui)
+ui/

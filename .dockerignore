@@ -1,0 +1,6 @@
+.git
+deps
+test-nginx
+dashboard/node_modules
+ui
+logs/*.log

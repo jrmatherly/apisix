@@ -187,6 +187,15 @@ init: runtime
 	@$(call func_echo_success_status, "$@ -> [ Done ]")
 
 
+### ui : Build the embedded dashboard from dashboard/ into ui/
+.PHONY: ui
+ui:
+	@$(call func_echo_status, "$@ -> [ Start ]")
+	cd dashboard && pnpm install --frozen-lockfile && pnpm run build
+	rm -rf ui && cp -r dashboard/dist ui
+	@$(call func_echo_success_status, "$@ -> [ Done ]")
+
+
 ### run : Start the apisix server
 .PHONY: run
 run: runtime

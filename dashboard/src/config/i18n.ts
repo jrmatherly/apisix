@@ -1,0 +1,85 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+
+import de_common from '@/locales/de/common.json';
+import en_common from '@/locales/en/common.json';
+import es_common from '@/locales/es/common.json';
+import tr_common from '@/locales/tr/common.json';
+import zh_common from '@/locales/zh/common.json'; 
+
+export const resources = {
+  en: {
+    common: en_common,
+  },
+  de: {
+    common: de_common,
+  },
+  zh: {
+    common: zh_common,
+  },
+  es: {
+    common: es_common,
+  },
+  tr: {
+    common: tr_common,
+  },
+} as const;
+
+export type Resources = typeof resources;
+export const defaultNS: keyof Resources['en'] = 'common';
+
+// Persist the language the same way the admin key is persisted (both are
+// user settings). A reload must not reset a zh/tr user to English (#3417).
+// We restore the STORED choice only and default to English otherwise —
+// deliberately not auto-detecting the browser language, which would
+// silently change the default for existing English users.
+export const LANG_STORAGE_KEY = 'settings:lang';
+
+const supportedLngs = Object.keys(resources) as (keyof Resources)[];
+
+const detectInitialLng = (): keyof Resources => {
+  try {
+    const stored = localStorage.getItem(LANG_STORAGE_KEY);
+    if (stored && (supportedLngs as string[]).includes(stored)) {
+      return stored as keyof Resources;
+    }
+  } catch {
+    // localStorage unavailable (SSR, privacy mode) — fall back to English
+  }
+  return 'en';
+};
+
+i18n.use(initReactI18next).init({
+  lng: detectInitialLng(),
+  supportedLngs,
+  ns: ['common'],
+  defaultNS,
+  resources,
+  fallbackLng: 'en',
+});
+
+i18n.on('languageChanged', (lng) => {
+  try {
+    localStorage.setItem(LANG_STORAGE_KEY, lng);
+  } catch {
+    // ignore persistence failures (privacy mode)
+  }
+});
+
+export default i18n;

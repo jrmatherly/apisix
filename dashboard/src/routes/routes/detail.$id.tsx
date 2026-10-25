@@ -1,0 +1,228 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button, Group, Skeleton } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+} from '@tanstack/react-router';
+import { Suspense, useEffect, useMemo } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { useBoolean } from 'react-use';
+
+import { getRouteQueryOptions } from '@/apis/hooks';
+import { putRouteReq } from '@/apis/routes';
+import { FormSubmitBtn } from '@/components/form/Btn';
+import { FormPartRoute } from '@/components/form-slice/FormPartRoute';
+import {
+  RoutePutSchema,
+  type RoutePutType,
+} from '@/components/form-slice/FormPartRoute/schema';
+import {
+  produceRoute,
+  produceVarsToForm,
+} from '@/components/form-slice/FormPartRoute/util';
+import {
+  produceRmEmptyUpstreamFields,
+  produceToNestedUpstreamForm,
+  produceToUpstreamForm,
+} from '@/components/form-slice/FormPartUpstream/util';
+import { FormTOCBox } from '@/components/form-slice/FormSection';
+import { FormSectionGeneral } from '@/components/form-slice/FormSectionGeneral';
+import { DeleteResourceBtn } from '@/components/page/DeleteResourceBtn';
+import { genDetailErrorComponent } from '@/components/page/DetailNotFound';
+import PageHeader from '@/components/page/PageHeader';
+import { RouteTestDrawer } from '@/components/page/RouteTestDrawer';
+import { API_ROUTES } from '@/config/constant';
+import { req } from '@/config/req';
+import { useEditCancelGuard } from '@/hooks/useEditCancelGuard';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { type APISIXType } from '@/types/schema/apisix';
+import { pipeProduce } from '@/utils/producer';
+
+type Props = {
+  readOnly: boolean;
+  setReadOnly: (v: boolean) => void;
+  id: string;
+};
+
+const RouteDetailForm = (props: Props) => {
+  const { readOnly, setReadOnly, id } = props;
+  const { t } = useTranslation();
+
+  const routeQuery = useSuspenseQuery(getRouteQueryOptions(id));
+  const { data: routeData, refetch } = routeQuery;
+
+  const formDefaults = useMemo(
+    () =>
+      produceVarsToForm(
+        produceToUpstreamForm(routeData.value.upstream || {}, routeData.value)
+      ),
+    [routeData.value]
+  );
+
+  const form = useForm({
+    resolver: zodResolver(RoutePutSchema),
+    shouldUnregister: true,
+    shouldFocusError: true,
+    mode: 'all',
+    disabled: readOnly,
+    defaultValues: formDefaults,
+  });
+
+  useEffect(() => {
+    if (!routeData.value) return;
+
+    const upstreamProduced = produceToNestedUpstreamForm(
+      routeData.value
+    );
+    form.reset(produceVarsToForm(upstreamProduced));
+  }, [routeData, form]);
+
+  const putRoute = useMutation({
+    mutationFn: (d: RoutePutType) =>
+      putRouteReq(
+        req,
+        pipeProduce(
+          produceRmEmptyUpstreamFields,
+          produceRoute
+        )(d) as APISIXType['Route']
+      ),
+    async onSuccess() {
+      notifications.show({
+        message: t('info.edit.success', { name: t('routes.singular') }),
+        color: 'green',
+      });
+      await refetch();
+      setReadOnly(true);
+    },
+  });
+
+  useUnsavedChangesGuard(form, { disabled: readOnly });
+  const handleCancel = useEditCancelGuard(form, () => setReadOnly(true));
+
+  return (
+    <FormProvider {...form}>
+      <form onSubmit={form.handleSubmit((d) => putRoute.mutateAsync(d))}>
+        <FormSectionGeneral readOnly />
+        <FormPartRoute />
+        {!readOnly && (
+          <Group>
+            <FormSubmitBtn>{t('form.btn.save')}</FormSubmitBtn>
+            <Button variant="outline" onClick={handleCancel}>
+              {t('form.btn.cancel')}
+            </Button>
+          </Group>
+        )}
+      </form>
+    </FormProvider>
+  );
+};
+
+type RouteDetailProps = Pick<Props, 'id'> & {
+  onDeleteSuccess: () => void;
+};
+export const RouteDetail = (props: RouteDetailProps) => {
+  const { id, onDeleteSuccess } = props;
+  const { t } = useTranslation();
+  const [readOnly, setReadOnly] = useBoolean(true);
+  const [testOpened, setTestOpened] = useBoolean(false);
+
+  return (
+    <>
+      <PageHeader
+        title={t('info.edit.title', { name: t('routes.singular') })}
+        extra={
+          <Group>
+            <Button
+              onClick={() => setTestOpened(true)}
+              size="compact-sm"
+              variant="light"
+            >
+              {t('test.entry')}
+            </Button>
+            {readOnly && (
+              <>
+                <Button
+                  onClick={() => setReadOnly(false)}
+                  size="compact-sm"
+                  variant="gradient"
+                >
+                  {t('form.btn.edit')}
+                </Button>
+                <DeleteResourceBtn
+                  mode="detail"
+                  name={t('routes.singular')}
+                  target={id}
+                  api={`${API_ROUTES}/${id}`}
+                  onSuccess={onDeleteSuccess}
+                />
+              </>
+            )}
+          </Group>
+        }
+        {...(readOnly && {
+          title: t('info.detail.titleWithId', {
+            name: t('routes.singular'),
+            id,
+          }),
+        })}
+      />
+      <RouteTestDrawer
+        opened={testOpened}
+        onClose={() => setTestOpened(false)}
+        id={id}
+      />
+      <Suspense
+        fallback={
+          <FormTOCBox>
+            <Skeleton height={400} />
+          </FormTOCBox>
+        }
+      >
+        <FormTOCBox>
+          <RouteDetailForm
+            readOnly={readOnly}
+            setReadOnly={setReadOnly}
+            id={id}
+          />
+        </FormTOCBox>
+      </Suspense>
+    </>
+  );
+};
+
+function RouteComponent() {
+  const { id } = useParams({ from: '/routes/detail/$id' });
+  const navigate = useNavigate();
+  return (
+    <RouteDetail id={id} onDeleteSuccess={() => navigate({ to: '/routes' })} />
+  );
+}
+
+export const Route = createFileRoute('/routes/detail/$id')({
+  component: RouteComponent,
+  errorComponent: genDetailErrorComponent({
+    idParam: 'id',
+    resource: 'routes',
+    to: '/routes',
+  }),
+});

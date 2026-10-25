@@ -1,0 +1,195 @@
+/**
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Button, Group, Skeleton } from '@mantine/core';
+import { notifications } from '@mantine/notifications';
+import { useMutation, useSuspenseQuery } from '@tanstack/react-query';
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+} from '@tanstack/react-router';
+import { Suspense, useEffect } from 'react';
+import { FormProvider, useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+import { useBoolean } from 'react-use';
+
+import { getStreamRouteQueryOptions } from '@/apis/hooks';
+import { putStreamRouteReq } from '@/apis/stream_routes';
+import { FormSubmitBtn } from '@/components/form/Btn';
+import { FormPartStreamRoute } from '@/components/form-slice/FormPartStreamRoute';
+import { produceStreamRoute } from '@/components/form-slice/FormPartStreamRoute/util';
+import { produceToNestedUpstreamForm } from '@/components/form-slice/FormPartUpstream/util';
+import { FormTOCBox } from '@/components/form-slice/FormSection';
+import { FormSectionGeneral } from '@/components/form-slice/FormSectionGeneral';
+import { DeleteResourceBtn } from '@/components/page/DeleteResourceBtn';
+import { genDetailErrorComponent } from '@/components/page/DetailNotFound';
+import PageHeader from '@/components/page/PageHeader';
+import { StreamRoutesErrorComponent } from '@/components/page-slice/stream_routes/ErrorComponent';
+import { API_STREAM_ROUTES } from '@/config/constant';
+import { req } from '@/config/req';
+import { useEditCancelGuard } from '@/hooks/useEditCancelGuard';
+import { useUnsavedChangesGuard } from '@/hooks/useUnsavedChangesGuard';
+import { APISIX, type APISIXType } from '@/types/schema/apisix';
+
+type Props = {
+  readOnly: boolean;
+  setReadOnly: (v: boolean) => void;
+  id: string;
+};
+
+const StreamRouteDetailForm = (props: Props) => {
+  const { readOnly, setReadOnly, id } = props;
+  const { t } = useTranslation();
+
+  const streamRouteQuery = useSuspenseQuery(getStreamRouteQueryOptions(id));
+  const { data: streamRouteData, refetch } = streamRouteQuery;
+
+  const form = useForm({
+    resolver: zodResolver(APISIX.StreamRoute),
+    shouldUnregister: true,
+    shouldFocusError: true,
+    mode: 'all',
+    disabled: readOnly,
+    // producer required here too: the root-level __checksEnabled flags
+    // must exist from the first mount (see services detail)
+    defaultValues: produceToNestedUpstreamForm(
+      streamRouteData.value
+    ) as typeof streamRouteData.value,
+  });
+
+  useEffect(() => {
+    // derive the root-level __checksEnabled flags from the nested
+    // upstream, or the checks section unmounts and drops upstream.checks
+    // from the next PUT (#3414)
+    form.reset(produceToNestedUpstreamForm(streamRouteData.value));
+  }, [streamRouteData, form]);
+
+  const putStreamRoute = useMutation({
+    mutationFn: (d: APISIXType['StreamRoute']) =>
+      putStreamRouteReq(req, produceStreamRoute(d)),
+    async onSuccess() {
+      notifications.show({
+        message: t('info.edit.success', { name: t('streamRoutes.singular') }),
+        color: 'green',
+      });
+      await refetch();
+      setReadOnly(true);
+    },
+  });
+
+  useUnsavedChangesGuard(form, { disabled: readOnly });
+  const handleCancel = useEditCancelGuard(form, () => setReadOnly(true));
+
+  return (
+    <FormProvider {...form}>
+      <form onSubmit={form.handleSubmit((d) => putStreamRoute.mutateAsync(d))}>
+        <FormSectionGeneral readOnly />
+        <FormPartStreamRoute />
+        {!readOnly && (
+          <Group>
+            <FormSubmitBtn>{t('form.btn.save')}</FormSubmitBtn>
+            <Button variant="outline" onClick={handleCancel}>
+              {t('form.btn.cancel')}
+            </Button>
+          </Group>
+        )}
+      </form>
+    </FormProvider>
+  );
+};
+
+
+
+type StreamRouteDetailProps = Pick<Props, 'id'> & {
+  onDeleteSuccess: () => void;
+};
+
+export const StreamRouteDetail = (props: StreamRouteDetailProps) => {
+  const { id, onDeleteSuccess } = props;
+  const { t } = useTranslation();
+  const [readOnly, setReadOnly] = useBoolean(true);
+
+  return (
+    <>
+      <PageHeader
+        title={t('info.edit.title', { name: t('streamRoutes.singular') })}
+        {...(readOnly && {
+          title: t('info.detail.titleWithId', {
+            name: t('streamRoutes.singular'),
+            id,
+          }),
+          extra: (
+            <Group>
+              <Button
+                onClick={() => setReadOnly(false)}
+                size="compact-sm"
+                variant="gradient"
+              >
+                {t('form.btn.edit')}
+              </Button>
+              <DeleteResourceBtn
+                mode="detail"
+                name={t('streamRoutes.singular')}
+                target={id}
+                api={`${API_STREAM_ROUTES}/${id}`}
+                onSuccess={onDeleteSuccess}
+              />
+            </Group>
+          ),
+        })}
+      />
+      <Suspense
+        fallback={
+          <FormTOCBox>
+            <Skeleton height={400} />
+          </FormTOCBox>
+        }
+      >
+        <FormTOCBox>
+          <StreamRouteDetailForm
+            readOnly={readOnly}
+            setReadOnly={setReadOnly}
+            id={id}
+          />
+        </FormTOCBox>
+      </Suspense>
+    </>
+  );
+};
+
+function RouteComponent() {
+  const { id } = useParams({ from: '/stream_routes/detail/$id' });
+  const navigate = useNavigate();
+  return (
+    <StreamRouteDetail
+      id={id}
+      onDeleteSuccess={() => navigate({ to: '/stream_routes' })}
+    />
+  );
+}
+
+export const Route = createFileRoute('/stream_routes/detail/$id')({
+  component: RouteComponent,
+  errorComponent: genDetailErrorComponent({
+    idParam: 'id',
+    resource: 'streamRoutes',
+    to: '/stream_routes',
+    // 400 = stream mode disabled on the gateway; that hint must survive.
+    fallback: StreamRoutesErrorComponent,
+  }),
+});

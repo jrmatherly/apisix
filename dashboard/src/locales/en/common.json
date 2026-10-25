@@ -1,0 +1,427 @@
+{
+  "apisix": {
+    "dashboard": "APISIX Dashboard",
+    "logo": "APISIX Logo"
+  },
+  "consumerGroups": {
+    "singular": "Consumer Group"
+  },
+  "consumers": {
+    "singular": "Consumer"
+  },
+  "credentials": {
+    "singular": "Credential"
+  },
+  "docs": "Docs",
+  "empty": {
+    "description": "No {{name}} yet"
+  },
+  "form": {
+    "basic": {
+      "desc": "Description",
+      "labels": {
+        "errorFormat": "The format of label is wrong, it should be `key:value`",
+        "key": "Key",
+        "placeholder": "Input text like `key:value`, then enter or blur",
+        "title": "Labels",
+        "value": "Value"
+      },
+      "name": "Name",
+      "status": "Status",
+      "statusOption": {
+        "0": "Disabled",
+        "1": "Enabled"
+      },
+      "title": "Basic Information"
+    },
+    "btn": {
+      "add": "Add",
+      "addARow": "Add a row",
+      "cancel": "Cancel",
+      "copied": "Copied",
+      "copy": "Copy",
+      "delete": "Delete",
+      "edit": "Edit",
+      "save": "Save",
+      "upload": "Upload",
+      "view": "View"
+    },
+    "consumers": {
+      "groupId": "Group ID",
+      "username": "Username"
+    },
+    "disabled": "Disabled, click switch to enable",
+    "general": {
+      "title": "General"
+    },
+    "info": {
+      "create_time": "Created At",
+      "id": "ID",
+      "title": "Information",
+      "update_time": "Updated At"
+    },
+    "json": {
+      "parseError": "JSON format is not valid"
+    },
+    "plugins": {
+      "addPlugin": "Add Plugin",
+      "configId": "Plugin Config ID",
+      "docsFor": "{{name}} documentation",
+      "editPlugin": "Edit Plugin",
+      "hideSecrets": "Hide secrets",
+      "label": "Plugins",
+      "searchForSelectedPlugins": "Search for Selected Plugins",
+      "selectPlugins": {
+        "title": "Select Plugins"
+      },
+      "showSecrets": "Show secrets",
+      "viewPlugin": "View Plugin"
+    },
+    "protos": {
+      "content": "Content",
+      "contentPlaceholder": "Paste or upload {{fileTypes}} file"
+    },
+    "ref": {
+      "view": "View {{name}}",
+      "viewNamed": "View {{resource}}: {{name}}",
+      "missing": "No {{name}} with this ID"
+    },
+    "routes": {
+      "enableWebsocket": "Enable WebSocket",
+      "filterFunc": "Filter Func",
+      "host": "Host",
+      "hosts": "Hosts",
+      "matchRules": "Match Rules",
+      "methods": "HTTP Methods",
+      "priority": "Priority",
+      "remoteAddr": "Remote Address",
+      "remoteAddrs": "Remote Addresses",
+      "service": "Service",
+      "uri": "URI",
+      "uris": "URIs",
+      "vars": "Vars"
+    },
+    "search": "Search",
+    "secrets": {
+      "aws": {
+        "access_key_id": "Access Key ID",
+        "endpoint_url": "Endpoint URL",
+        "region": "Region",
+        "secret_access_key": "Secret Access Key",
+        "session_token": "Session Token"
+      },
+      "gcp": {
+        "auth": "Auth",
+        "auth_config": "Auth Configuration",
+        "auth_file": "Auth File",
+        "client_email": "Client Email",
+        "entries_uri": "Entries URI",
+        "private_key": "Private Key",
+        "project_id": "Project ID",
+        "scope": "Scope",
+        "ssl_verify": "SSL Verify",
+        "token_uri": "Token URI"
+      },
+      "manager": "Secret Manager",
+      "managerConfig": "Manager Configuration",
+      "title": "Secret Configuration",
+      "vault": {
+        "namespace": "Namespace",
+        "prefix": "Prefix",
+        "token": "Token",
+        "uri": "URI"
+      }
+    },
+    "services": {
+      "enableWebsocket": "Enable WebSocket",
+      "hosts": "Hosts",
+      "script": "Script",
+      "settings": "Service Settings"
+    },
+    "ssls": {
+      "cert": "Certificate",
+      "cert_key_list": {
+        "add": "Add a pair",
+        "delete": "Delete the pair",
+        "title": "Certificate and Key Pairs"
+      },
+      "client": {
+        "ca": "Client CA Certificate",
+        "depth": "Verification Depth",
+        "skipMtlsUriRegex": "Skip mTLS URI Regex",
+        "title": "Client"
+      },
+      "key": "Private Key",
+      "keyHidden": "••••••",
+      "keyHint": "The gateway never returns private keys. Enter the key again to save any change.",
+      "sni": "SNI",
+      "snis": "SNIs",
+      "ssl_protocols": "SSL Protocols",
+      "type": "Certificate Type"
+    },
+    "streamRoutes": {
+      "protocol": {
+        "conf": "Conf",
+        "logger": "Logger",
+        "name": "Protocol Name",
+        "superiorId": "Superior ID",
+        "title": "Protocol Information"
+      },
+      "remoteAddr": "Remote Address",
+      "server": "Server",
+      "serverAddr": "Server Address",
+      "serverPort": "Server Port",
+      "sni": "SNI"
+    },
+    "tagsInput": {
+      "placeholder": "Input text, then enter or blur"
+    },
+    "upload": {
+      "fileOverSize": "file size is too large",
+      "readError": "file read error:"
+    },
+    "upstreams": {
+      "checks": {
+        "active": {
+          "concurrency": "Concurrency",
+          "healthy": {
+            "http_statuses": "HTTP Statuses",
+            "interval": "Interval",
+            "successes": "Successes",
+            "title": "Healthy"
+          },
+          "host": "Host",
+          "http_path": "HTTP Path",
+          "http_request_headers": "HTTP Request Headers",
+          "https_verify_certificate": "Https Verify Certificate",
+          "port": "Port",
+          "timeout": "Timeout",
+          "title": "Active",
+          "type": "Type",
+          "unhealthy": {
+            "http_failures": "HTTP Failures",
+            "http_statuses": "HTTP Statuses",
+            "interval": "Interval",
+            "tcp_failures": "TCP Failures",
+            "timeouts": "Timeouts",
+            "title": "Unhealthy"
+          }
+        },
+        "passive": {
+          "healthy": {
+            "http_statuses": "HTTP Statuses",
+            "successes": "Successes",
+            "title": "Healthy"
+          },
+          "title": "Passive",
+          "type": "Type",
+          "unhealthy": {
+            "http_failures": "HTTP Failures",
+            "http_statuses": "HTTP Statuses",
+            "tcp_failures": "TCP Failures",
+            "timeouts": "Timeouts",
+            "title": "Unhealthy"
+          }
+        },
+        "title": "Health Checks"
+      },
+      "connectionConfiguration": "Connection Configuration",
+      "discoveryArgs": {
+        "title": "Discovery Args"
+      },
+      "discoveryType": {
+        "title": "Discovery Type"
+      },
+      "findUpstreamFrom": "Find Upstream From",
+      "hashOn": "Hash On",
+      "hashOnDesc": "This will be valid when `type` is `chash`",
+      "identifier": "Upstream Identifier",
+      "inline": "Inline Upstream Configuration",
+      "keepalivePool": {
+        "idleTimeout": "IDLE Timeout",
+        "requests": "Requests",
+        "size": "Size",
+        "title": "Keepalive Pool"
+      },
+      "key": "Key",
+      "keyDesc": "This will be valid when `type` is `chash`",
+      "loadBalancing": "Load Balancing",
+      "nodes": {
+        "action": {
+          "title": "Action"
+        },
+        "add": "Add a Node",
+        "host": {
+          "title": "Host"
+        },
+        "port": {
+          "title": "Port"
+        },
+        "priority": {
+          "title": "Priority"
+        },
+        "title": "Nodes",
+        "weight": {
+          "title": "Weight"
+        }
+      },
+      "passHost": "Pass Host",
+      "retries": "Retries",
+      "retry": "Retry",
+      "retryTimeout": "Retry timeout",
+      "scheme": "Scheme",
+      "serviceDiscovery": {
+        "serviceName": "Service Name",
+        "title": "Service Discovery"
+      },
+      "serviceId": "Service ID",
+      "serviceName": {
+        "title": "Service Name"
+      },
+      "timeout": {
+        "connect": "Connect",
+        "read": "Read",
+        "send": "Send",
+        "title": "Timeout"
+      },
+      "title": "Upstream",
+      "tls": {
+        "clientCert": "Client Cert",
+        "clientCertId": "Client Cert ID",
+        "clientCertKeyPair": "Client Cert Key Pair",
+        "clientKey": "Client Key",
+        "title": "TLS",
+        "verify": "Verify"
+      },
+      "type": "Type",
+      "updateTime": "Update Time",
+      "upstreamHost": "Upstream Host",
+      "upstreamHostDesc": "Set this when `pass_host` is `rewrite`",
+      "upstreamId": "Upstream ID"
+    }
+  },
+  "globalRules": {
+    "singular": "Global Rule"
+  },
+  "help-us-translate": "Help Us Translate!",
+  "info": {
+    "add": {
+      "success": "Add {{name}} Successfully",
+      "title": "Add {{name}}"
+    },
+    "delete": {
+      "content": "Do you want to delete the {{name}}",
+      "success": "Delete {{name}} Successfully",
+      "title": "Delete {{name}}",
+      "confirm": "Are you sure you want to delete <0>{{name}}</0>?"
+    },
+    "detail": {
+      "title": "{{name}} Detail",
+      "titleWithId": "{{name}} · {{id}}"
+    },
+    "edit": {
+      "success": "Edit {{name}} Successfully",
+      "title": "Edit {{name}}"
+    },
+    "unsaved": {
+      "confirm": "Discard Changes",
+      "content": "You have unsaved changes. Are you sure you want to close?",
+      "title": "Unsaved Changes"
+    }
+  },
+  "mark": {
+    "question": "?"
+  },
+  "noData": "No Data",
+  "or": "OR",
+  "pluginConfigs": {
+    "singular": "Plugin Config"
+  },
+  "pluginMetadata": {
+    "search": "Search Plugin Metadata",
+    "singular": "Plugin Metadata"
+  },
+  "protos": {
+    "singular": "Proto"
+  },
+  "routes": {
+    "singular": "Route"
+  },
+  "seconds": "Seconds",
+  "secrets": {
+    "singular": "Secret"
+  },
+  "services": {
+    "singular": "Service"
+  },
+  "settings": {
+    "adminKey": "Admin Key",
+    "title": "Settings",
+    "ui-commit-sha": "UI Commit SHA"
+  },
+  "sources": {
+    "consumerGroups": "Consumer Groups",
+    "consumers": "Consumers",
+    "credentials": "Credentials",
+    "globalRules": "Global Rules",
+    "pluginConfigs": "Plugin Configs",
+    "pluginMetadata": "Plugin Metadata",
+    "protos": "Protos",
+    "routes": "Routes",
+    "secrets": "Secrets",
+    "services": "Services",
+    "ssls": "SSLs",
+    "streamRoutes": "Stream Routes",
+    "upstreams": "Upstreams"
+  },
+  "ssls": {
+    "singular": "SSL"
+  },
+  "streamRoutes": {
+    "singular": "Stream Route"
+  },
+  "table": {
+    "actions": "Actions",
+    "disabled": "Disabled",
+    "enabled": "Enabled"
+  },
+  "test": {
+    "title": "Test request",
+    "entry": "Test",
+    "gatewayUrl": "Gateway URL",
+    "gatewayUrlPlaceholder": "http://127.0.0.1:9080",
+    "gatewayUrlRequired": "Set the gateway URL first",
+    "method": "Method",
+    "path": "Path",
+    "wildcardHint": "Replace the wildcard/regex with a concrete path",
+    "headers": "Headers",
+    "addHeader": "Add header",
+    "removeHeader": "Remove header",
+    "body": "Body",
+    "curl": "curl",
+    "copy": "Copy",
+    "copied": "Copied",
+    "send": "Send request",
+    "response": "Response",
+    "responseHeaders": "Headers",
+    "blocked": "The browser couldn't read a response (likely cross-origin or unreachable). Copy the command above and run it in a terminal."
+  },
+  "upstreams": {
+    "singular": "Upstream"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "retry": "Retry",
+    "notFound": {
+      "description": "This {{name}} does not exist. It may have been deleted.",
+      "back": "Back to {{name}}"
+    }
+  },
+  "a11y": {
+    "clearSearch": "Clear search",
+    "close": "Close",
+    "openSettings": "Open settings",
+    "selectLanguage": "Select language",
+    "toggleNavigation": "Toggle navigation"
+  }
+}

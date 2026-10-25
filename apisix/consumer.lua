@@ -255,10 +255,11 @@ function create_consume_cache(consumers_conf, key_attr)
         local new_consumer = consumer_lrucache(consumer, nil,
                                 fill_consumer_secret, consumer)
         local key_value = new_consumer.auth_conf[key_attr]
-        -- fail closed: skip if the credential is unset or an unresolved secret ref,
-        -- else a client could auth with the literal $ENV://... reference string
-        if key_value == nil then
-            core.log.error("missing consumer auth credential '", key_attr,
+        -- fail closed: skip if the credential is unset, empty (a secret ref that
+        -- resolved to "" would otherwise match an empty header) or an unresolved
+        -- secret ref, else a client could auth with the literal $ENV://... string
+        if key_value == nil or key_value == "" then
+            core.log.error("missing or empty consumer auth credential '", key_attr,
                            "', skipping consumer: ", new_consumer.consumer_name)
 
         elseif secret.has_secret_ref(new_consumer.auth_conf) then

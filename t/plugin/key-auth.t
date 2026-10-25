@@ -780,3 +780,50 @@ apikey: $env://KEYAUTH_UNRESOLVED_SECRET
 {"message":"Invalid API key in request"}
 --- error_log
 invalid api key
+
+
+
+=== TEST 35: consumer key uses an env ref that resolves to an empty string
+--- main_config
+env KEYAUTH_EMPTY_KEY=;
+--- config
+    location /t {
+        content_by_lua_block {
+            local t = require("lib.test_admin").test
+            local code, body = t('/apisix/admin/consumers',
+                ngx.HTTP_PUT,
+                [[{
+                    "username": "jack",
+                    "plugins": {
+                        "key-auth": {
+                            "key": "$env://KEYAUTH_EMPTY_KEY"
+                        }
+                    }
+                }]]
+                )
+
+            if code >= 300 then
+                ngx.status = code
+            end
+            ngx.say(body)
+        }
+    }
+--- request
+GET /t
+--- response_body
+passed
+
+
+
+=== TEST 36: fail closed, an empty apikey header does not match the empty key
+--- main_config
+env KEYAUTH_EMPTY_KEY=;
+--- request
+GET /hello
+--- more_headers
+apikey:
+--- error_code: 401
+--- response_body
+{"message":"Invalid API key in request"}
+--- error_log
+invalid api key

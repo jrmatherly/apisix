@@ -45,7 +45,7 @@ extraEnvVars:
   - name: LOCAL_LLM_AUTHORIZATION
     valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: LOCAL_LLM_AUTHORIZATION, optional: true } }
   - name: DEMO_CONSUMER_KEY
-    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: DEMO_CONSUMER_KEY, optional: true } }
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: DEMO_CONSUMER_KEY } }
 
 apisix:
   admin:

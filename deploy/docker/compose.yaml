@@ -16,6 +16,10 @@ services:
     env_file:
       - path: .env
         required: false
+    environment:
+      # fail closed: an empty key would otherwise match an empty header
+      APISIX_ADMIN_KEY: ${APISIX_ADMIN_KEY:?set APISIX_ADMIN_KEY in .env}
+      DEMO_CONSUMER_KEY: ${DEMO_CONSUMER_KEY:?set DEMO_CONSUMER_KEY in .env}
     volumes:
       - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
     depends_on:

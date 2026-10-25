@@ -4,12 +4,17 @@
 #
 # Secrets are never in this file:
 #   - Secret `apisix-admin` with keys `admin` and `viewer` (Admin API keys)
+#   - Secret `apisix-etcd` with key `etcd-root-password` (etcd RBAC root)
 #   - Secret `apisix-provider-keys` (optional) with the provider env vars below
 image:
   repository: apache/apisix
   tag: 3.19.0-debian
 
 replicaCount: 1
+
+# Lets the etcd NetworkPolicy admit only APISIX pods.
+podLabels:
+  apisix-etcd-client: "true"
 
 # The official image runs as uid 636 (docker-images/debian/Dockerfile); these
 # settings satisfy the `restricted` Pod Security Standard.
@@ -63,6 +68,12 @@ metrics:
 
 etcd:
   replicaCount: 1
+  auth:
+    rbac:
+      create: true
+      existingSecret: apisix-etcd
+  networkPolicy:
+    allowExternal: false
   containerSecurityContext:
     enabled: true
   # bitnami etcd 12.x subchart; its own defaults already run non-root (1001)

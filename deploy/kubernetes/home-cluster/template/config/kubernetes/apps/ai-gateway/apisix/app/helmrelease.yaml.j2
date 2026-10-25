@@ -36,6 +36,8 @@ spec:
       repository: apache/apisix
       tag: 3.19.0-debian
     replicaCount: 1
+    podLabels:
+      apisix-etcd-client: "true"
     podSecurityContext:
       runAsNonRoot: true
       runAsUser: 636
@@ -79,6 +81,12 @@ spec:
         enabled: true
     etcd:
       replicaCount: 3
+      auth:
+        rbac:
+          create: true
+          existingSecret: apisix-etcd
+      networkPolicy:
+        allowExternal: false
       containerSecurityContext:
         enabled: true
       persistence:

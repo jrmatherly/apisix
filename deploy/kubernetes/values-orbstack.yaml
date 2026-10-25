@@ -1,10 +1,8 @@
 # Local OrbStack Kubernetes overrides (no Prometheus operator, LoadBalancer
-# works out of the box on OrbStack).
+# works out of the box on OrbStack). The Admin API stays ClusterIP: use
+# kubectl port-forward svc/apisix-admin 9180.
 metrics:
   serviceMonitor:
     enabled: false
 service:
   type: LoadBalancer
-apisix:
-  admin:
-    type: LoadBalancer

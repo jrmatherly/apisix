@@ -16,6 +16,7 @@ kubectl create namespace ai-gateway
 kubectl label namespace ai-gateway pod-security.kubernetes.io/enforce=restricted
 kubectl -n ai-gateway create secret generic apisix-admin \
   --from-literal=admin="$(openssl rand -hex 16)" --from-literal=viewer="$(openssl rand -hex 16)"
+kubectl -n ai-gateway create secret generic apisix-etcd --from-literal=etcd-root-password="$(openssl rand -hex 16)"
 kubectl -n ai-gateway create secret generic apisix-provider-keys \
   --from-literal=OPENAI_API_KEY="$OPENAI_API_KEY"   # add the others you have
 kubectl kustomize --enable-helm --load-restrictor LoadRestrictionsNone \
@@ -27,8 +28,10 @@ same patch as the Flux `postRenderers` block: the chart's `wait-etcd` init
 container carries no securityContext, and a `restricted` namespace rejects the
 pod without it. Helm 4 no longer runs script post-renderers, hence kustomize.
 
-Then `kubectl -n ai-gateway get svc` for the LoadBalancer IPs: `apisix-gateway`
-(port 80) and `apisix-admin` (9180, dashboard at `/ui/`).
+Then `kubectl -n ai-gateway get svc apisix-gateway` for the LoadBalancer IP
+(port 80), and `kubectl -n ai-gateway port-forward svc/apisix-admin 9180` for
+the Admin API and dashboard at http://localhost:9180/ui/. etcd runs with RBAC
+and a NetworkPolicy that admits only APISIX pods.
 
 ## home-cluster (Talos + Flux + makejinja)
 

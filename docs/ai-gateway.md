@@ -752,12 +752,14 @@ Purpose: serves an MCP server (tools generated from an OpenAPI 3.x document) ove
 
 Schema `openapi-to-mcp.lua:23-64`: required `openapi_url`, `base_url` (`:63`); `transport` ∈ `sse|streamable_http` default `sse` (`:26-31`); `headers{}` forwarded to the external service (`:42-53`); `flatten_parameters=false` (`:54-61`). `base_url` and `headers` values support nginx-variable interpolation (`:81-102`). Input: the spec is fetched over HTTP GET from `openapi_url` (`openapi-to-mcp/openapi/loader.lua:182-188`), parsed as JSON then YAML via `lyaml` (`loader.lua:133-135`); doc states OpenAPI 3.x JSON or YAML with internal and http(s) `$ref` (`docs/en/latest/plugins/openapi-to-mcp.md:43`). Streamable HTTP answers in-process and bypasses the upstream (`:105-120`). Not an LLM-calling plugin; no provider key.
 
+`headers` values go through `core.utils.resolve_var` for `${var}` request variables only (`openapi-to-mcp.lua:81-98`); a `$env://` or `$secret://` reference is resolved by the plugin runner only when it is the whole value (`apisix/plugin.lua:101-113`, `apisix/secret.lua:214`). So the env var below holds the complete `Bearer ...` string, as with the ai-proxy routes. A per-request alternative is a `${http_x_api_token}` variable (`docs/en/latest/plugins/openapi-to-mcp.md:52`).
+
 ```json
 { "uri": "/mcp", "methods": ["GET", "POST", "DELETE"],
   "plugins": { "openapi-to-mcp": { "transport": "streamable_http",
       "openapi_url": "https://petstore3.swagger.io/api/v3/openapi.json",
       "base_url": "https://petstore3.swagger.io/api/v3",
-      "headers": { "Authorization": "Bearer $env://PETSTORE_TOKEN" } } },
+      "headers": { "Authorization": "$env://PETSTORE_AUTHORIZATION" } } },
   "upstream": { "type": "roundrobin", "nodes": { "127.0.0.1:1980": 1 } } }
 
 ```
@@ -773,7 +775,7 @@ routes:
         openapi_url: "https://petstore3.swagger.io/api/v3/openapi.json"
         base_url: "https://petstore3.swagger.io/api/v3"
         headers:
-          Authorization: "Bearer $env://PETSTORE_TOKEN"
+          Authorization: "$env://PETSTORE_AUTHORIZATION"
     upstream:
       type: roundrobin
       nodes:

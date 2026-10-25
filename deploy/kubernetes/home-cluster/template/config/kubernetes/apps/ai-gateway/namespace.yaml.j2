@@ -1,0 +1,14 @@
+#% if apisix_enabled %#
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ai-gateway
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    #% if nvidia_enabled %#
+    localai.ai/client: "true"
+    #% endif %#
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+#% endif %#

@@ -1,0 +1,14 @@
+#% if apisix_enabled %#
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ./helmrepository.yaml
+  - ./helmrelease.yaml
+  - ./admin-secret.sops.yaml
+  - ./provider-keys.sops.yaml
+  - ./httproute.yaml
+  - ./httproute-admin.yaml
+  - ./securitypolicy.yaml
+  - ./oidc-secret.sops.yaml
+#% endif %#

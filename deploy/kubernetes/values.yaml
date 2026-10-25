@@ -1,0 +1,69 @@
+# Values for the published `apisix` Helm chart (https://apache.github.io/apisix-helm-chart,
+# chart 2.18.2 = APISIX 3.19.0), shared by every target. HelmRelease-ready:
+# paste under spec.values or pass with `helm -f`.
+#
+# Secrets are never in this file:
+#   - Secret `apisix-admin` with keys `admin` and `viewer` (Admin API keys)
+#   - Secret `apisix-provider-keys` (optional) with the provider env vars below
+image:
+  repository: apache/apisix
+  tag: 3.19.0-debian
+
+replicaCount: 1
+
+# The official image runs as uid 636 (docker-images/debian/Dockerfile); these
+# settings satisfy the `restricted` Pod Security Standard.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 636
+  runAsGroup: 0
+  seccompProfile:
+    type: RuntimeDefault
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+service:
+  type: ClusterIP
+
+# Env vars routes may reference as $env://NAME (docs/ai-gateway.md). Only the
+# keys present in the secret are set; the rest resolve to empty.
+extraEnvVars:
+  - name: OPENAI_API_KEY
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: OPENAI_API_KEY, optional: true } }
+  - name: ANTHROPIC_API_KEY
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: ANTHROPIC_API_KEY, optional: true } }
+  - name: AZURE_OPENAI_API_KEY
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: AZURE_OPENAI_API_KEY, optional: true } }
+  - name: LOCAL_LLM_API_KEY
+    valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: LOCAL_LLM_API_KEY, optional: true } }
+
+apisix:
+  admin:
+    enable_admin_ui: true
+    credentials:
+      secretName: apisix-admin
+    allow:
+      # Admin traffic arrives through the cluster gateway, so IP allow-listing
+      # cannot identify callers; the key (and OIDC at the gateway) protects it.
+      ipList: ["0.0.0.0/0", "::/0"]
+  prometheus:
+    enabled: true
+  nginx:
+    envs:
+      - OPENAI_API_KEY
+      - ANTHROPIC_API_KEY
+      - AZURE_OPENAI_API_KEY
+      - LOCAL_LLM_API_KEY
+
+metrics:
+  serviceMonitor:
+    enabled: true
+
+etcd:
+  replicaCount: 1
+  containerSecurityContext:
+    enabled: true
+  # bitnami etcd 12.x subchart; its own defaults already run non-root (1001)
+  # with RuntimeDefault seccomp and dropped capabilities.

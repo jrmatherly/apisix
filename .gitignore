@@ -110,3 +110,6 @@ private/
 
 # embedded dashboard build output (make ui)
 ui/
+
+# kustomize --enable-helm chart cache
+deploy/kubernetes/orbstack/charts/

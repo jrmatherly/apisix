@@ -1,0 +1,44 @@
+#% if apisix_enabled %#
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: apisix-admin
+spec:
+  targetRefs:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: apisix-admin
+  oidc:
+    provider:
+      issuer: https://auth.${SECRET_DOMAIN}
+      authorizationEndpoint: https://auth.${SECRET_DOMAIN}/authorize
+      tokenEndpoint: https://auth.${SECRET_DOMAIN}/api/oidc/token
+    clientID: "#{ apisix.oidc_client_id }#"
+    clientSecret:
+      name: apisix-oidc
+    logoutPath: /logout
+    scopes: ["openid", "profile", "email", "groups"]
+    cookieNames:
+      idToken: apisix-id-token
+  jwt:
+    providers:
+      - name: pocket-id
+        issuer: https://auth.${SECRET_DOMAIN}
+        remoteJWKS:
+          uri: https://auth.${SECRET_DOMAIN}/.well-known/jwks.json
+        extractFrom:
+          cookies: ["apisix-id-token"]
+  authorization:
+    defaultAction: Deny
+    rules:
+      - name: cluster-admins
+        action: Allow
+        principal:
+          jwt:
+            provider: pocket-id
+            claims:
+              - name: groups
+                valueType: StringArray
+                values: ["cluster_admins"]
+#% endif %#

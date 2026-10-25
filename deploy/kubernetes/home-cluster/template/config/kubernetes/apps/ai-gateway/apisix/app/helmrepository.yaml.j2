@@ -1,0 +1,10 @@
+#% if apisix_enabled %#
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: apisix
+spec:
+  interval: 1h
+  url: https://apache.github.io/apisix-helm-chart
+#% endif %#

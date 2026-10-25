@@ -1,0 +1,86 @@
+#% if apisix_enabled %#
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: apisix
+spec:
+  chart:
+    spec:
+      chart: apisix
+      version: 2.18.2
+      sourceRef:
+        kind: HelmRepository
+        name: apisix
+  interval: 1h
+  timeout: 15m
+  # The chart's wait-etcd init container has no securityContext; the
+  # restricted namespace rejects the pod without this patch. Index 0 is
+  # wait-etcd in chart 2.18.2; re-check on chart upgrades.
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              kind: Deployment
+              name: apisix
+            patch: |
+              - op: add
+                path: /spec/template/spec/initContainers/0/securityContext
+                value:
+                  allowPrivilegeEscalation: false
+                  capabilities:
+                    drop: ["ALL"]
+  # Same content as deploy/kubernetes/values.yaml in the apisix repo.
+  values:
+    image:
+      repository: apache/apisix
+      tag: 3.19.0-debian
+    replicaCount: 1
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 636
+      runAsGroup: 0
+      seccompProfile:
+        type: RuntimeDefault
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop: ["ALL"]
+    service:
+      type: ClusterIP
+    extraEnvVars:
+      - name: OPENAI_API_KEY
+        valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: OPENAI_API_KEY, optional: true } }
+      - name: ANTHROPIC_API_KEY
+        valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: ANTHROPIC_API_KEY, optional: true } }
+      - name: AZURE_OPENAI_API_KEY
+        valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: AZURE_OPENAI_API_KEY, optional: true } }
+      - name: LOCAL_LLM_API_KEY
+        valueFrom: { secretKeyRef: { name: apisix-provider-keys, key: LOCAL_LLM_API_KEY, optional: true } }
+    apisix:
+      admin:
+        enable_admin_ui: true
+        credentials:
+          secretName: apisix-admin
+        allow:
+          # Admin traffic arrives through the cluster gateway, so IP allow-listing
+          # cannot identify callers; the key (and OIDC at the gateway) protects it.
+          ipList: ["0.0.0.0/0", "::/0"]
+      prometheus:
+        enabled: true
+      nginx:
+        envs:
+          - OPENAI_API_KEY
+          - ANTHROPIC_API_KEY
+          - AZURE_OPENAI_API_KEY
+          - LOCAL_LLM_API_KEY
+    metrics:
+      serviceMonitor:
+        enabled: true
+    etcd:
+      replicaCount: 3
+      containerSecurityContext:
+        enabled: true
+      persistence:
+        storageClass: "#{ apisix.etcd_storage_class }#"
+#% endif %#

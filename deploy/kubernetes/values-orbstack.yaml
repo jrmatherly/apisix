@@ -1,0 +1,10 @@
+# Local OrbStack Kubernetes overrides (no Prometheus operator, LoadBalancer
+# works out of the box on OrbStack).
+metrics:
+  serviceMonitor:
+    enabled: false
+service:
+  type: LoadBalancer
+apisix:
+  admin:
+    type: LoadBalancer

@@ -1,0 +1,27 @@
+# Local OrbStack Kubernetes: kustomize inflates the published chart and applies
+# the same init-container patch as the home-cluster HelmRelease postRenderers.
+#   kubectl kustomize --enable-helm --load-restrictor LoadRestrictionsNone deploy/kubernetes/orbstack | kubectl apply -f -
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ai-gateway
+helmCharts:
+  - name: apisix
+    repo: https://apache.github.io/apisix-helm-chart
+    version: 2.18.2
+    releaseName: apisix
+    namespace: ai-gateway
+    valuesFile: ../values.yaml
+    additionalValuesFiles:
+      - ../values-orbstack.yaml
+# initContainers/0 is wait-etcd in chart 2.18.2; re-check on chart upgrades.
+patches:
+  - target:
+      kind: Deployment
+      name: apisix
+    patch: |
+      - op: add
+        path: /spec/template/spec/initContainers/0/securityContext
+        value:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]

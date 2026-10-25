@@ -1,0 +1,13 @@
+#% if apisix_enabled %#
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ai-gateway
+
+components:
+  - ../../components/sops
+
+resources:
+  - ./namespace.yaml
+  - ./apisix/ks.yaml
+#% endif %#

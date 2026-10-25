@@ -21,6 +21,9 @@ services:
       context: ..
       dockerfile: .devcontainer/Dockerfile
     command: sleep infinity
+    env_file:
+      - path: ../.env
+        required: false
     volumes:
       - ..:/workspace:cached
     network_mode: service:etcd

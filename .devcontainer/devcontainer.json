@@ -4,7 +4,7 @@
   "service": "apisix",
   "workspaceFolder": "/workspace",
   "privileged": true,
-  "postCreateCommand": "bash -c 'cd /workspace && rm -rf test-nginx && git config --global --add safe.directory /workspace && git submodule update --init --recursive && git clone https://github.com/openresty/test-nginx.git --depth 1 --single-branch -b master && make deps'",
+  "postCreateCommand": "bash -c 'cd /workspace && rm -rf test-nginx && git config --global --add safe.directory /workspace && git submodule update --init --recursive && git clone https://github.com/openresty/test-nginx.git --depth 1 --single-branch -b master && make deps && { [ -f .env ] || cp .env.example .env; } && { [ -f conf/config-dev.yaml ] || cp conf/config.yaml conf/config-dev.yaml; }'",
   "customizations": {
     "vscode": {
       "extensions": ["ms-vscode.makefile-tools", "ms-azuretools.vscode-docker", "sumneko.lua"]

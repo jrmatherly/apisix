@@ -31,7 +31,7 @@ As it needs to support multiple operating systems and CPU ISAs, the process has 
 
 The tutorial can be used as an alternative to a [bare-metal environment](building-apisix.md) or a [macOS container development environment](build-apisix-dev-environment-on-mac.md).
 
-It only requires that you have an environment running Docker or a similar alternative (the docker/docker compose command is required), and no other dependent components need to be installed on your host machine.
+It only requires that you have an environment running Docker or a similar alternative (the docker/docker compose command is required, Docker Compose 2.24 or later), and no other dependent components need to be installed on your host machine.
 
 :::
 
@@ -109,6 +109,10 @@ make test
 # or run a specify test case file
 FLUSH_ETCD=1 prove -Itest-nginx/lib -I. -r t/admin/api.t
 ```
+
+### Where the Admin API key goes
+
+`.env` sets `APISIX_PROFILE=dev`, so APISIX writes the generated Admin API key to `conf/config-dev.yaml`, which git ignores, and `conf/config.yaml` stays clean. The key is the `deployment.admin.admin_key[0].key` value in that file.
 
 ## FAQ
 

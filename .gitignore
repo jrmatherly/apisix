@@ -69,6 +69,7 @@ t/lib/dubbo*/**/target/
 !.markdownlint.yml
 !.licenserc.yaml
 !.ignore_words
+!.env.example
 conf/apisix.yaml
 conf/apisix-*.yaml
 conf/config-*.yaml

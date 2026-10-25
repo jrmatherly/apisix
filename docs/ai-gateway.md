@@ -102,7 +102,9 @@ Caveat found: `conf/config.yaml.example:598` comments `ai-aws-content-moderation
   - ai-aliyun-content-moderation   # priority: 1029       (603)
   - ai-lakera-guard                # priority: 1028       (604)
   - openapi-to-mcp                 # priority: 540        (622)
+
 ```
+
 Also `plugin_attr.ai-proxy.http_client: ngx_http_ffi_client` (alternative `lua-resty-http`) at `conf/config.yaml.example:685-687`, shared by ai-proxy and ai-proxy-multi.
 
 ### Native providers (`apisix/plugins/ai-providers/`)
@@ -146,6 +148,7 @@ Then ai-proxy maps client protocol → provider capability: native if the provid
 Purpose: single-upstream LLM proxy; rewrites the request to the provider's endpoint, injects auth, parses usage (`apisix/plugins/ai-proxy.lua`, `ai-proxy/base.lua`).
 
 Schema `apisix/plugins/ai-proxy/schema.lua:331-400` (`_M.ai_proxy_schema`):
+
 - required: `provider` (enum above, `:334-338`), `auth` (`:341`, `:395`).
 - `auth` (`:33-73`): `header{}` / `query{}` string maps (`:24-31`), `gcp{service_account_json,max_ttl,expire_early_secs=60}` (`:38-60`), `aws{access_key_id,secret_access_key,session_token}` (`:61-70`). `additionalProperties=false`.
 - `options` (`:75-88`): `model` plus any extra keys, flat-overwritten into the body (`ai-providers/base.lua:75-83`). `options.model` takes precedence over body `model` (`ai-proxy/base.lua:267-271`).
@@ -155,12 +158,14 @@ Schema `apisix/plugins/ai-proxy/schema.lua:331-400` (`_M.ai_proxy_schema`):
 - Extra validation in `check_schema` (`ai-proxy.lua:35-53`): provider module must load; non-secret `service_account_json` must be valid JSON; vertex-ai needs `provider_conf` or `override.endpoint`; bedrock needs `provider_conf.region` and `auth.aws` (`schema.lua:561-589`).
 
 Behaviour proven from code:
+
 - Instance name seen by ai-rate-limiting is `"ai-proxy-" .. conf.provider` (`ai-proxy.lua:65`).
 - Upstream is bypassed (`ctx.bypass_nginx_upstream = true`, `ai-proxy.lua:68`); the route's `upstream` is irrelevant but the Admin API still requires a route to be valid, so docs examples put a dummy one.
 - "X-API-KEY style" auth: yes, any header name in `auth.header` is sent verbatim (lowercased key) — `ai-transport/http.lua:97-99`. Nothing sets `Authorization` for you except `auth.gcp`.
 - Ollama: use `provider: openai-compatible` with `override.endpoint: http://ollama:11434/v1/chat/completions` (or scheme+host only, path then defaults to `/v1/chat/completions`, `openai-compatible.lua:38`; `ai-providers/base.lua:217-222`). The scheme comes from the parsed endpoint, default https (`base.lua:196`), so plain `http` works. This is derived from code; there is no Ollama example in repo or online docs (unverified as a tested configuration).
 
 Minimal route (Admin API body, OpenAI):
+
 ```json
 {
   "uri": "/v1/chat/completions",
@@ -172,9 +177,12 @@ Minimal route (Admin API body, OpenAI):
       "options": { "model": "gpt-4o-mini" }
     }
   }
+
 }
 ```
+
 Same, Anthropic native (expose Messages API):
+
 ```json
 {
   "uri": "/v1/messages",
@@ -186,9 +194,12 @@ Same, Anthropic native (expose Messages API):
       "options": { "model": "claude-sonnet-4-5" }
     }
   }
+
 }
 ```
+
 Same, Ollama via openai-compatible:
+
 ```json
 {
   "uri": "/ollama/chat",
@@ -201,11 +212,14 @@ Same, Ollama via openai-compatible:
       "override": { "endpoint": "http://ollama:11434/v1/chat/completions" }
     }
   }
+
 }
 ```
+
 (`auth` is a required object even when the backend ignores it; the `patternProperties` schema accepts an empty `{}` header map — `schema.lua:24-31` — unverified at runtime whether `auth: {}` passes `required` on nested keys; a dummy header is the safe form.)
 
 Standalone YAML (`conf/apisix.yaml`):
+
 ```yaml
 routes:
   - id: openai-chat
@@ -219,6 +233,7 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
 
@@ -231,6 +246,7 @@ Caveats: Azure needs `override.endpoint` set to the full deployment URL incl. `a
 Purpose: same as ai-proxy with N instances, load balancing, health checks, retries/fallback (`apisix/plugins/ai-proxy-multi.lua`).
 
 Schema `apisix/plugins/ai-proxy/schema.lua:402-559` (`_M.ai_proxy_multi_schema`):
+
 - required: `instances` (`:549`); each instance requires `name, provider, auth, weight` (`:228`), optional `priority=0`, `options`, `override`, `provider_conf`, `checks.active` (`:202-208`, uses `schema_def.health_checker_active`), semantic `examples[]`/`threshold`.
 - `balancer.algorithm` ∈ `chash|roundrobin|semantic`, default roundrobin, `hash_on`, `key` (`:405-437`).
 - `fallback_strategy`: string `instance_health_and_rate_limiting|http_429|http_5xx` or array of `rate_limiting|http_429|http_5xx` (`:441-455`). `fallback_http_statuses[]` 400-599 (`:456-476`), `max_retries` (`:477-486`), `retry_on_failure_within_ms` (`:487-497`).
@@ -241,6 +257,7 @@ Schema `apisix/plugins/ai-proxy/schema.lua:402-559` (`_M.ai_proxy_multi_schema`)
 Proven: fallback_strategy and health checks are implemented — `fallback_strategy_has` (`ai-proxy-multi.lua:80`), rate-limiting-aware pick (`:661-662`), 429/5xx/extra-status retry with `retry_on_failure_within_ms` and `max_retries` (`:944-969`), per-instance `checks` → `healthcheck_manager.fetch_checker` (`:627-637`, `:1003-1006`, `:1045-1071`). Semantic algorithm does not participate in health checks or fallback (`schema.lua:411-418`). Docs note OpenAI/DeepSeek/AIMLAPI have no official health endpoint (`docs/en/latest/plugins/ai-proxy-multi.md:110`). Endpoint resolution per instance: `override.endpoint` else provider `get_node`/`host` (`:387-412`), with DNS re-resolution (`:421-432`).
 
 Admin API body:
+
 ```json
 {
   "uri": "/v1/chat/completions",
@@ -259,9 +276,12 @@ Admin API body:
       ]
     }
   }
+
 }
 ```
+
 Standalone:
+
 ```yaml
 routes:
   - id: llm-multi
@@ -289,8 +309,10 @@ routes:
                 anthropic-version: "2023-06-01"
             options:
               model: claude-sonnet-4-5
+
 #END
 ```
+
 Caveat: the second instance above mixes an OpenAI-chat client protocol with Anthropic; that works because `anthropic.lua:40-43` lists `openai-chat` natively at `/v1/chat/completions` (Anthropic's OpenAI-compat endpoint), not through the converter.
 
 ---
@@ -304,6 +326,7 @@ Schema `ai-rate-limiting.lua:53-172`: `limit` + `time_window` (route-wide, integ
 What it counts: `ctx.ai_token_usage[limit_strategy]` (`:426-430`), or `cost_expr` evaluated over `ctx.llm_raw_usage` (`:412-424`). Those are filled by the provider base from the protocol's `extract_usage` (`ai-providers/base.lua:34-61`); for openai-chat that is `usage.prompt_tokens/completion_tokens/total_tokens` plus cache/reasoning details (`ai-protocols/openai-chat.lua:217-231`); Anthropic usage is normalised by `to_usage` (`anthropic-messages.lua:201-207`), with split streaming events merged (`base.lua:43-49`). Zero usage skips counting (`:449-452`). Instance match key = `ctx.picked_ai_instance_name` (`:296`, `:435`): `"ai-proxy-<provider>"` for ai-proxy (`ai-proxy.lua:65`) or the instance `name` for ai-proxy-multi (`ai-proxy-multi.lua:932`). An instance not listed falls back to the top-level `limit` if set (`:274-283`). With ai-proxy-multi `fallback_strategy` rate_limiting, a limited instance is skipped (`ai-proxy-multi.lua:661-662`).
 
 Admin API:
+
 ```json
 {
   "uri": "/v1/chat/completions",
@@ -319,9 +342,12 @@ Admin API:
       "instances": [ { "name": "ai-proxy-openai", "limit": 10000, "time_window": 60 } ]
     }
   }
+
 }
 ```
+
 Standalone:
+
 ```yaml
 routes:
   - id: llm-limited
@@ -341,6 +367,7 @@ routes:
           - name: ai-proxy-openai
             limit: 10000
             time_window: 60
+
 #END
 ```
 
@@ -358,7 +385,9 @@ Schema `:28-58`: `allow_patterns[]`, `deny_patterns[]` (PCRE, validated at `:73-
     "ai-prompt-guard": { "deny_patterns": ["(?i)ignore (all|previous) instructions"], "match_all_roles": false },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: guarded
@@ -374,6 +403,7 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
 
@@ -392,7 +422,9 @@ Schema `:41-77`: required `templates[]` with `name` and `template{model, message
         "messages": [ { "role": "system", "content": "Summarize in {{ language }}." }, { "role": "user", "content": "{{ text }}" } ] } } ] },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: templated
@@ -414,8 +446,10 @@ routes:
         auth:
           header:
             Authorization: "$env://OPENAI_AUTHORIZATION"
+
 #END
 ```
+
 (Template variable syntax is `{{variable_name}}`, filled from the request body — `docs/en/latest/plugins/ai-prompt-template.md:52`, examples `:110-114`, `template_name` in the request at `:287`.)
 
 ---
@@ -432,7 +466,9 @@ Schema `:40-58`: `prepend[]` and/or `append[]` of `{role, content}` (`:21-33`); 
     "ai-prompt-decorator": { "prepend": [ { "role": "system", "content": "You are a terse assistant." } ] },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: decorated
@@ -450,6 +486,7 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
 
@@ -466,7 +503,9 @@ Schema `:60-114`: required `prompt`, `provider` (same enum), `auth{header,query}
   "plugins": { "ai-request-rewrite": { "prompt": "Translate the JSON body to English, keep keys.", "provider": "openai",
       "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } } },
   "upstream": { "type": "roundrobin", "nodes": { "backend:8080": 1 } } }
+
 ```
+
 ```yaml
 routes:
   - id: rewrite
@@ -485,6 +524,7 @@ routes:
       type: roundrobin
       nodes:
         "backend:8080": 1
+
 #END
 ```
 
@@ -504,7 +544,9 @@ External dependencies: **Redis**. The default `exact` layer uses plain GET/SET (
     "ai-cache": { "redis_host": "redis", "redis_port": 6379, "redis_password": "$env://REDIS_PASSWORD", "exact": { "ttl": 600 } },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: cached
@@ -524,8 +566,10 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
+
 Semantic layer addition: `layers: ["exact","semantic"]`, `semantic.embedding.openai: {model: text-embedding-3-small, api_key: "$env://OPENAI_AUTHORIZATION"}`, `semantic.vector_search.redis: {}`. `check_schema` warns when `semantic` is configured but not listed in `layers` (`ai-cache.lua:68-71`) and warns on non-https embedding endpoints (`:60-63`).
 
 ---
@@ -548,7 +592,9 @@ External dependencies: **only Azure OpenAI embeddings + Azure AI Search** in 3.1
     "ai-proxy": { "provider": "azure-openai", "auth": { "header": { "api-key": "$secret://vault/1/azure/openai-key" } },
       "override": { "endpoint": "https://RES.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-15-preview" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: rag
@@ -571,8 +617,10 @@ routes:
             api-key: "$secret://vault/1/azure/openai-key"
         override:
           endpoint: "https://RES.openai.azure.com/openai/deployments/gpt-4o/chat/completions?api-version=2024-02-15-preview"
+
 #END
 ```
+
 (Azure URL shapes and api-versions are placeholders, not taken from the repo.)
 
 ---
@@ -589,7 +637,9 @@ Schema `:56-187`: required `comprehend{access_key_id, secret_access_key, region}
     "ai-aws-content-moderation": { "comprehend": { "access_key_id": "$env://AWS_ACCESS_KEY_ID", "secret_access_key": "$env://AWS_SECRET_ACCESS_KEY", "region": "us-east-1" }, "moderation_threshold": 0.6 },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: moderated-aws
@@ -609,8 +659,10 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
+
 Caveat: priority 1031 is below ai-proxy (1040), so request-side moderation runs after ai-proxy's `access` but before `before_proxy` sends the upstream request (ai-proxy defers the call to `before_proxy`, `ai-proxy.lua:72`); it relies on `ctx.ai_client_protocol` set by ai-proxy.
 
 ---
@@ -627,7 +679,9 @@ Schema `:35-121`: required `endpoint, region_id, access_key_id, access_key_secre
     "ai-aliyun-content-moderation": { "endpoint": "https://green-cip.cn-shanghai.aliyuncs.com", "region_id": "cn-shanghai", "access_key_id": "$env://ALIYUN_AK_ID", "access_key_secret": "$env://ALIYUN_AK_SECRET" },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: moderated-aliyun
@@ -646,8 +700,10 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
+
 (Endpoint host is the conventional Green-CIP one; not read from the repo doc — unverified.)
 
 ---
@@ -664,7 +720,9 @@ Schema `ai-lakera-guard/schema.lua:21-100`: required `api_key` (sent as `Authori
     "ai-lakera-guard": { "api_key": "$secret://vault/1/lakera/api-key", "direction": "both", "deny_code": 400 },
     "ai-proxy": { "provider": "openai", "auth": { "header": { "Authorization": "$env://OPENAI_AUTHORIZATION" } }, "options": { "model": "gpt-4o-mini" } }
   } }
+
 ```
+
 ```yaml
 routes:
   - id: lakera
@@ -682,6 +740,7 @@ routes:
             Authorization: "$env://OPENAI_AUTHORIZATION"
         options:
           model: gpt-4o-mini
+
 #END
 ```
 
@@ -700,7 +759,9 @@ Schema `openapi-to-mcp.lua:23-64`: required `openapi_url`, `base_url` (`:63`); `
       "base_url": "https://petstore3.swagger.io/api/v3",
       "headers": { "Authorization": "Bearer $env://PETSTORE_TOKEN" } } },
   "upstream": { "type": "roundrobin", "nodes": { "127.0.0.1:1980": 1 } } }
+
 ```
+
 ```yaml
 routes:
   - id: mcp
@@ -717,8 +778,10 @@ routes:
       type: roundrobin
       nodes:
         "127.0.0.1:1980": 1
+
 #END
 ```
+
 (`methods` list and dummy upstream follow the doc's example at `openapi-to-mcp.md:84-88`; whether DELETE is needed depends on client session termination — unverified.)
 
 ---

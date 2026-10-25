@@ -28,7 +28,7 @@ jobs:
         with:
           node-version: "12.x"
       - run: npm install -g markdownlint-cli@0.25.0
-      - run: markdownlint '**/*.md'
+      - run: markdownlint '**/*.md' --ignore dashboard --ignore docker-images --ignore deploy
       - name: check category
         run: |
           ./utils/check-category.py

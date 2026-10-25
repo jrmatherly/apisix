@@ -23,6 +23,7 @@ header:
 
   paths-ignore:
     - '.gitignore'
+    - '.dockerignore'
     - '.gitattributes'
     - '.gitmodules'
     - 'LICENSE'
@@ -54,6 +55,11 @@ header:
     - 'autodocs/'
     - 'docs/**/*.md'
     - '.ignore_words'
+    # Fork-only directories: subtrees carry their own headers, deploy/ is unlicensed config
+    - 'deploy/'
+    - 'dashboard/'
+    - 'docker-images/'
+    - 'MONOREPO.md'
     - '.luacheckrc'
     # Exclude file contains certificate revocation information
     - 't/certs/ocsp/index.txt'

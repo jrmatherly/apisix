@@ -6,6 +6,7 @@ on:
     paths:
       - 'apisix/cli/ops.lua'
       - 'docker/debian-dev/**'
+      - 'dashboard/**'
       - 't/cli/test_standalone_docker.sh'
       - 'Makefile'
       - '.github/workflows/docker-standalone.yml'
@@ -14,6 +15,7 @@ on:
     paths:
       - 'apisix/cli/ops.lua'
       - 'docker/debian-dev/**'
+      - 'dashboard/**'
       - 't/cli/test_standalone_docker.sh'
       - 'Makefile'
       - '.github/workflows/docker-standalone.yml'

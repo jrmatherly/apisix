@@ -109,7 +109,7 @@ t/plugin/__pycache__/
 private/
 
 # embedded dashboard build output (make ui)
-ui/
+/ui/
 
 # kustomize --enable-helm chart cache
 deploy/kubernetes/orbstack/charts/

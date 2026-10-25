@@ -90,7 +90,7 @@ function install_dependencies_with_apt() {
     sudo apt-get update
 
     # install some compilation tools
-    sudo apt-get install -y curl make gcc g++ cpanminus libpcre2-dev libyaml-dev unzip openresty-zlib-dev openresty-pcre-dev libxml2-dev libxslt-dev zlib1g-dev
+    sudo apt-get install -y curl make gcc g++ cpanminus libpcre2-dev libyaml-dev unzip xz-utils cmake openresty-zlib-dev openresty-pcre-dev libxml2-dev libxslt-dev zlib1g-dev
 }
 
 # Identify the different distributions and call the corresponding function

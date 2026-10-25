@@ -1,0 +1,135 @@
+# Milestone routes for the AI gateway, declarative form (standalone mode:
+# deployment.role_data_plane.config_provider: yaml, file conf/apisix.yaml).
+# Every key is a reference, never a literal: $env://NAME is an env var listed
+# under nginx_config.envs; $secret://vault/... needs a secrets provider.
+# See docs/ai-gateway.md for what each plugin needs.
+consumers:
+  - username: demo
+    plugins:
+      key-auth:
+        key: "$env://DEMO_CONSUMER_KEY"
+
+routes:
+  # Local OpenAI-compatible server (Ollama, LocalAI, or the compose mock).
+  # No native Ollama provider exists in 3.19: openai-compatible + override.endpoint.
+  - id: local-chat
+    uri: /local/v1/chat/completions
+    methods: ["POST"]
+    plugins:
+      key-auth: {}
+      ai-proxy:
+        provider: openai-compatible
+        auth:
+          header:
+            Authorization: "Bearer $env://LOCAL_LLM_API_KEY"
+        options:
+          model: qwen-3.5-4b
+        override:
+          # compose: http://mock-llm:8000/v1/chat/completions
+          # Ollama on the Mac from Docker: http://host.docker.internal:11434/v1/chat/completions
+          # home-cluster LocalAI: http://localai.ai.svc.cluster.local:8080/v1/chat/completions
+          endpoint: http://mock-llm:8000/v1/chat/completions
+      ai-rate-limiting:
+        limit: 20000
+        time_window: 60
+        limit_strategy: total_tokens
+
+  - id: openai-chat
+    uri: /openai/v1/chat/completions
+    methods: ["POST"]
+    plugins:
+      key-auth: {}
+      ai-proxy:
+        provider: openai
+        auth:
+          header:
+            Authorization: "Bearer $env://OPENAI_API_KEY"
+        options:
+          model: gpt-4o-mini
+      ai-prompt-guard:
+        deny_patterns:
+          - "(?i)ignore (all|any) previous instructions"
+
+  # Anthropic is native; exposing /v1/messages gives Messages API semantics,
+  # a /chat/completions URI gives OpenAI-chat semantics on the same provider.
+  - id: anthropic-messages
+    uri: /anthropic/v1/messages
+    methods: ["POST"]
+    plugins:
+      key-auth: {}
+      ai-proxy:
+        provider: anthropic
+        auth:
+          header:
+            x-api-key: "$env://ANTHROPIC_API_KEY"
+            anthropic-version: "2023-06-01"
+        options:
+          model: claude-sonnet-4-5
+
+  # Azure OpenAI: endpoint carries the deployment and api-version; the body's
+  # model field is stripped by the provider.
+  - id: azure-chat
+    uri: /azure/v1/chat/completions
+    methods: ["POST"]
+    plugins:
+      key-auth: {}
+      ai-proxy:
+        provider: azure-openai
+        auth:
+          header:
+            api-key: "$env://AZURE_OPENAI_API_KEY"
+        override:
+          endpoint: "https://RESOURCE.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-10-21"
+
+  # One entry point across providers with weighted balancing and fallback.
+  - id: llm
+    uri: /v1/chat/completions
+    methods: ["POST"]
+    plugins:
+      key-auth: {}
+      ai-prompt-decorator:
+        prepend:
+          - role: system
+            content: "You are a concise assistant."
+      ai-proxy-multi:
+        fallback_strategy: ["rate_limiting", "http_429", "http_5xx"]
+        max_retries: 1
+        instances:
+          - name: azure
+            provider: azure-openai
+            weight: 5
+            auth:
+              header:
+                api-key: "$env://AZURE_OPENAI_API_KEY"
+            override:
+              endpoint: "https://RESOURCE.openai.azure.com/openai/deployments/gpt-4o-mini/chat/completions?api-version=2024-10-21"
+          - name: openai
+            provider: openai
+            weight: 3
+            auth:
+              header:
+                Authorization: "Bearer $env://OPENAI_API_KEY"
+            options:
+              model: gpt-4o-mini
+          - name: anthropic
+            provider: anthropic
+            weight: 2
+            auth:
+              header:
+                x-api-key: "$env://ANTHROPIC_API_KEY"
+                anthropic-version: "2023-06-01"
+            options:
+              model: claude-sonnet-4-5
+      ai-rate-limiting:
+        limit_strategy: total_tokens
+        instances:
+          - name: azure
+            limit: 100000
+            time_window: 60
+          - name: openai
+            limit: 50000
+            time_window: 60
+          - name: anthropic
+            limit: 50000
+            time_window: 60
+#END

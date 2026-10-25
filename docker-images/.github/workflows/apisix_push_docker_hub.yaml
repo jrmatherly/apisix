@@ -1,0 +1,87 @@
+name: Docker image
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+      - release/apisix-**
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - ubuntu
+          - debian
+          - redhat
+    env:
+      APISIX_DOCKER_TAG: 3.19.0-${{ matrix.platform }}
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v2
+
+      - name: Build and run
+        run: |
+          make build-on-${{ matrix.platform }}
+          docker compose -f ./compose/docker-compose-release.yaml up -d
+          sleep 30
+          docker logs compose-apisix-1
+
+      - name: Test route
+        run: |
+          # error.log is symlinked to stderr, so check the container logs
+          if docker logs compose-apisix-1 2>&1 | grep -C 3 '\[error\]'; then
+            echo "found errors in apisix startup logs"
+            exit 1
+          fi
+
+          curl http://127.0.0.1:9180/apisix/admin/routes/1 \
+          -H 'X-API-KEY: edd1c9f034335f136f87ad84b625c8f1' -X PUT -d '
+            {
+            "uri": "/get",
+            "upstream": {
+                "type": "roundrobin",
+                "nodes": {
+                    "httpbin:80": 1
+                }
+            }
+          }'
+
+          result_code=`curl -I -m 10 -o /dev/null -s -w %{http_code} http://127.0.0.1:9080/get`
+          if [[ $result_code -ne 200 ]];then
+            printf "result_code: %s\n" "$result_code"
+            exit 125
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c
+
+      - name: Login to Docker Hub
+        if: ${{ startsWith(github.ref_name, 'release/apisix') }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          username: ${{ secrets.DOCKERHUB_USER }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build multiarch image
+        if: ${{ !startsWith(github.ref_name, 'release/apisix') }}
+        run: |
+          make build-multiarch-on-${{ matrix.platform }}
+
+      - name: Push apisix:latest image to Docker Hub
+        if: ${{ startsWith(github.ref_name, 'release/apisix') && (matrix.platform == 'ubuntu') }}
+        run: |
+          make push-multiarch-on-latest
+
+      - name: Push apisix:${{ matrix.os }} image to Docker Hub
+        if: ${{ startsWith(github.ref_name, 'release/apisix') }}
+        run: |
+          make push-multiarch-on-${{ matrix.platform }}

@@ -20,8 +20,11 @@ editing: `cluster-apps` picks up `kubernetes/apps/ai-gateway/kustomization.yaml`
    `admin_key`, `viewer_key`, `etcd_root_password`, `demo_consumer_key`, `oidc_client_id`, `oidc_client_secret`,
    `openai_api_key`, `anthropic_api_key`, `azure_openai_api_key`
    (all `str = ""`), `etcd_storage_class: str = "local-path"` (or the
-   cluster's default class), and a computed `apisix_enabled` that is
-   `self.apisix.admin_key != ""`. Use `_all_or_none` for the OIDC pair.
+   cluster's default class), and two computed fields: `apisix_enabled`
+   (`self.apisix.admin_key != ""`) and `apisix_oidc_enabled`
+   (`self.apisix.oidc_client_id != ""`, the `localai_webui_enabled` pattern).
+   Use `_all_or_none` for the OIDC pair. List both computed fields in
+   `.claude/rules/templates.md`, which enumerates every computed field.
 2. `cluster.sample.toml`: an `[apisix]` block with those keys as commented
    REQUIRED/OPTIONAL lines, placed after `[localai]`.
 3. `cluster.toml`: the same block at the same position (check-layout enforces
@@ -39,15 +42,21 @@ Create the Pocket ID client by hand with callback
 - HelmRelease `apisix` from HelmRepository `apisix` (no OCI chart is published
   for apisix-helm-chart). Values are `deploy/kubernetes/values.yaml` with
   3 etcd replicas on the configured storage class.
-- `ai.${SECRET_DOMAIN}` → `apisix-gateway:80` (data plane; API keys per route).
+- `llm.${SECRET_DOMAIN}` → `apisix-gateway:80` (data plane; API keys per route).
+  (`ai.` is taken by ai-workspace.)
 - `apisix.${SECRET_DOMAIN}` → `apisix-admin:9180` (Admin API and `/ui/`),
   behind Envoy Gateway's Pocket ID SecurityPolicy, group `cluster_admins`.
+  Rendered only when `apisix_oidc_enabled`; without the OIDC client the Admin
+  API stays cluster-internal (port-forward).
 - Secrets: `apisix-admin` (admin/viewer keys), `apisix-etcd` (etcd RBAC root
   password; the etcd NetworkPolicy admits only APISIX pods), `apisix-provider-keys` (env vars
   that routes reference as `$env://OPENAI_AUTHORIZATION` and so on), `apisix-oidc`.
   LocalAI's key is reused from `localai.api_key` when `nvidia_enabled`, and
   the namespace carries `localai.ai/client: "true"` so LocalAI's NetworkPolicy
   admits APISIX. Reach it at `http://localai.ai.svc.cluster.local:8080/v1`.
+- etcd: RBAC on, pre-upgrade Job off (its pod would be blocked
+  by the etcd NetworkPolicy and its immutable spec breaks re-applies), image
+  pinned by digest.
 - The restricted namespace needs the `postRenderers` patch in the HelmRelease
   (the chart's `wait-etcd` init container lacks a securityContext).
 

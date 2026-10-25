@@ -1,6 +1,14 @@
 # Local OrbStack Kubernetes overrides (no Prometheus operator, LoadBalancer
 # works out of the box on OrbStack). The Admin API stays ClusterIP: use
 # kubectl port-forward svc/apisix-admin 9180.
+etcd:
+  auth:
+    token:
+      privateKey:
+        # kubectl kustomize renders the chart without `lookup`, so the chart
+        # would mint a new JWT key on every render; Flux's helm-controller
+        # does not need this.
+        existingSecret: apisix-etcd-jwt
 metrics:
   serviceMonitor:
     enabled: false

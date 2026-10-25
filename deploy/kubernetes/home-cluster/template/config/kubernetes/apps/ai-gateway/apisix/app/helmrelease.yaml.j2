@@ -30,7 +30,8 @@ spec:
                   allowPrivilegeEscalation: false
                   capabilities:
                     drop: ["ALL"]
-  # Same content as deploy/kubernetes/values.yaml in the apisix repo.
+  # Hand-copied from deploy/kubernetes/values.yaml in the apisix repo (etcd
+  # replicaCount, image digest and storageClass differ); keep the two in step.
   values:
     image:
       repository: apache/apisix
@@ -88,6 +89,12 @@ spec:
         rbac:
           create: true
           existingSecret: apisix-etcd
+      # The pre-upgrade Job is recreated on every apply (immutable spec) and
+      # its pod is not admitted by the etcd NetworkPolicy.
+      preUpgradeJob:
+        enabled: false
+      image:
+        tag: 3.6@sha256:99b408c1527228ce83d47fd664c25402817151587f84caa81287613b3c0206fc
       networkPolicy:
         allowExternal: false
       containerSecurityContext:

@@ -76,6 +76,12 @@ etcd:
     rbac:
       create: true
       existingSecret: apisix-etcd
+  # The pre-upgrade Job is recreated on every apply (immutable spec) and
+  # its pod is not admitted by the etcd NetworkPolicy.
+  preUpgradeJob:
+    enabled: false
+  image:
+    tag: "3.6"
   networkPolicy:
     allowExternal: false
   containerSecurityContext:

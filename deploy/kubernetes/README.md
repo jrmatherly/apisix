@@ -17,6 +17,7 @@ kubectl label namespace ai-gateway pod-security.kubernetes.io/enforce=restricted
 kubectl -n ai-gateway create secret generic apisix-admin \
   --from-literal=admin="$(openssl rand -hex 16)" --from-literal=viewer="$(openssl rand -hex 16)"
 kubectl -n ai-gateway create secret generic apisix-etcd --from-literal=etcd-root-password="$(openssl rand -hex 16)"
+kubectl -n ai-gateway create secret generic apisix-etcd-jwt --from-file=jwt-token.pem=<(openssl genrsa 4096 2>/dev/null)
 kubectl -n ai-gateway create secret generic apisix-provider-keys \
   --from-literal=OPENAI_AUTHORIZATION="Bearer $OPENAI_API_KEY" \
   --from-literal=DEMO_CONSUMER_KEY="$(openssl rand -hex 16)"   # add the others you have

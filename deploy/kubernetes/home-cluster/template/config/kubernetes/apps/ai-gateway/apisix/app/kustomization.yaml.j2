@@ -9,7 +9,9 @@ resources:
   - ./etcd-secret.sops.yaml
   - ./provider-keys.sops.yaml
   - ./httproute.yaml
+  #% if apisix_oidc_enabled %#
   - ./httproute-admin.yaml
   - ./securitypolicy.yaml
   - ./oidc-secret.sops.yaml
+  #% endif %#
 #% endif %#

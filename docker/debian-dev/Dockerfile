@@ -14,6 +14,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# full image: the dashboard build (unplugin-info) needs the git binary
+FROM node:24-bookworm AS dashboard
+
+WORKDIR /dashboard
+COPY dashboard/package.json dashboard/pnpm-lock.yaml ./
+RUN corepack enable pnpm && pnpm install --frozen-lockfile
+COPY dashboard/ ./
+RUN pnpm run build
+
 FROM debian:bookworm-slim AS build
 
 ARG ENABLE_PROXY=false
@@ -64,7 +73,7 @@ RUN apt-get -y update --fix-missing \
 COPY --from=build /usr/local/apisix /usr/local/apisix
 COPY --from=build /usr/local/openresty /usr/local/openresty
 COPY --from=build /usr/bin/apisix /usr/bin/apisix
-COPY --chown=nobody:root ui/ /usr/local/apisix/ui/
+COPY --from=dashboard --chown=nobody:root /dashboard/dist/ /usr/local/apisix/ui/
 
 COPY ${INSTALL_BROTLI} /install-brotli.sh
 RUN chmod +x /install-brotli.sh \

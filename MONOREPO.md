@@ -54,6 +54,6 @@ make run
 ```
 
 Docker images build the dashboard themselves (`docker/debian-dev/Dockerfile`),
-so `ui/` is only needed for `make run` outside Docker. Upstream CI pins the
-dashboard commit in `.requirements` (`APISIX_DASHBOARD_COMMIT`); in this fork
-the subtree at `dashboard/` is the pinned source.
+so `ui/` is only needed for `make run` outside Docker. Upstream pins a
+dashboard commit in `.requirements`; this fork dropped that line because the
+subtree at `dashboard/` is the pinned source.

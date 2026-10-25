@@ -1,0 +1,58 @@
+# AI gateway stack built from this source tree: APISIX (+ embedded dashboard
+# at /ui/), etcd, an OpenAI-compatible mock upstream, and optional Prometheus.
+#   cp .env.example .env   # set APISIX_ADMIN_KEY and provider keys
+#   docker compose up -d --build
+services:
+  apisix:
+    build:
+      context: ../..
+      dockerfile: docker/debian-dev/Dockerfile
+      args:
+        CODE_PATH: .
+        ENTRYPOINT_PATH: ./docker/debian-dev/docker-entrypoint.sh
+        INSTALL_BROTLI: ./docker/debian-dev/install-brotli.sh
+    image: apisix-ai-gateway:dev
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./apisix/config.yaml:/usr/local/apisix/conf/config.yaml:ro
+    depends_on:
+      - etcd
+    # Bound to localhost: the Admin API is protected only by its key.
+    ports:
+      - "127.0.0.1:9080:9080"   # gateway
+      - "127.0.0.1:9180:9180"   # Admin API + /ui/
+      - "127.0.0.1:9091:9091"   # prometheus metrics
+      - "127.0.0.1:9443:9443"
+
+  etcd:
+    image: bitnamilegacy/etcd:3.6
+    restart: unless-stopped
+    environment:
+      ETCD_DATA_DIR: /etcd_data
+      ALLOW_NONE_AUTHENTICATION: "yes"
+      ETCD_ADVERTISE_CLIENT_URLS: "http://etcd:2379"
+      ETCD_LISTEN_CLIENT_URLS: "http://0.0.0.0:2379"
+    volumes:
+      - etcd-data:/etcd_data
+
+  # OpenAI-compatible stand-in for Ollama/LocalAI. Point routes at
+  # http://mock-llm:8000/v1/chat/completions (provider openai-compatible).
+  mock-llm:
+    image: python:3.13-alpine
+    command: ["python", "-I", "/srv/server.py"]
+    volumes:
+      - ./mock-llm/server.py:/srv/server.py:ro
+
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    profiles: [monitoring]
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "127.0.0.1:9090:9090"
+
+volumes:
+  etcd-data:
